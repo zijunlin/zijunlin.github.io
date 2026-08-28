@@ -49,6 +49,8 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
+    outputs:
+      page_url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       pages: write
       id-token: write
@@ -59,3 +61,17 @@ jobs:
       - name: Deploy GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  verify:
+    if: github.event_name != 'pull_request'
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deployed site
+        run: |
+          curl --fail --silent --show-error \
+            --retry 6 \
+            --retry-delay 5 \
+            --retry-all-errors \
+            --output /dev/null \
+            "${{ needs.deploy.outputs.page_url }}"
