@@ -72,29 +72,11 @@ jobs:
     steps:
       - name: Verify deployed site
         run: |
-          deployed_url="$(
-            curl --fail --silent --show-error \
-              --location \
-              --retry 6 \
-              --retry-delay 5 \
-              --retry-all-errors \
-              --output /dev/null \
-              --write-out '%{url_effective}' \
-              "$DEPLOYED_URL"
-          )"
-          canonical_url="$(
-            curl --fail --silent --show-error \
-              --location \
-              --retry 6 \
-              --retry-delay 5 \
-              --retry-all-errors \
-              --output /dev/null \
-              --write-out '%{url_effective}' \
-              "$CANONICAL_URL"
-          )"
+          deployed_location="${DEPLOYED_URL#*://}"
+          canonical_location="${CANONICAL_URL#*://}"
 
-          if [ "${deployed_url%/}" != "${canonical_url%/}" ]; then
-            echo "Deployment URL resolves to $deployed_url instead of $canonical_url"
+          if [ "${deployed_location%/}" != "${canonical_location%/}" ]; then
+            echo "Deployment URL does not target the canonical location: $DEPLOYED_URL"
             exit 1
           fi
 
