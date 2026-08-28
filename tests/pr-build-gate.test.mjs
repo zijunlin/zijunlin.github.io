@@ -1,31 +1,28 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { parse } from "yaml";
 
 const workflowUrl = new URL("../.github/workflows/pages.yml", import.meta.url);
 
 test("pull requests receive a production contract check without publication", async () => {
-  const workflow = await readFile(workflowUrl, "utf8");
-  const buildStart = workflow.indexOf("\n  build:");
-  const deployStart = workflow.indexOf("\n  deploy:");
-
-  assert.notEqual(buildStart, -1, "the workflow should define a build job");
-  assert.notEqual(deployStart, -1, "the workflow should define a deploy job");
-
-  const buildJob = workflow.slice(buildStart, deployStart);
-  const deployJob = workflow.slice(deployStart);
-
-  assert.match(workflow, /pull_request:\s*\n\s+branches:\s*\n\s+- master/);
-  assert.match(buildJob, /run: npm ci/);
-  assert.match(buildJob, /run: npm test/);
-  assert.doesNotMatch(buildJob, /pages: write|id-token: write/);
-  assert.match(
-    buildJob,
-    /if: github\.event_name != 'pull_request'\s*\n\s+uses: actions\/configure-pages@/
+  const source = await readFile(workflowUrl, "utf8");
+  const workflow = parse(source);
+  const buildJob = workflow.jobs.build;
+  const deployJob = workflow.jobs.deploy;
+  const configurePages = buildJob.steps.find((step) =>
+    step.uses?.startsWith("actions/configure-pages@")
   );
-  assert.match(
-    buildJob,
-    /if: github\.event_name != 'pull_request'\s*\n\s+uses: actions\/upload-pages-artifact@/
+  const uploadArtifact = buildJob.steps.find((step) =>
+    step.uses?.startsWith("actions/upload-pages-artifact@")
   );
-  assert.match(deployJob, /if: github\.event_name != 'pull_request'/);
+
+  assert.deepEqual(workflow.on.pull_request.branches, ["master"]);
+  assert.ok(buildJob.steps.some((step) => step.run === "npm ci"));
+  assert.ok(buildJob.steps.some((step) => step.run === "npm test"));
+  assert.deepEqual(workflow.permissions, { contents: "read" });
+  assert.equal(buildJob.permissions, undefined);
+  assert.equal(configurePages.if, "github.event_name != 'pull_request'");
+  assert.equal(uploadArtifact.if, "github.event_name != 'pull_request'");
+  assert.equal(deployJob.if, "github.event_name != 'pull_request'");
 });
