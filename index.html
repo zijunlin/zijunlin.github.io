@@ -1,1 +1,115 @@
-Hello Worl
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#07080b" />
+    <meta name="description" content="Zijun Lin 的个人网站——创意开发、交互体验与数字作品。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Zijun Lin — Creative Developer" />
+    <meta property="og:description" content="将想法塑造成可感知的体验。探索创意开发、WebGL 与交互设计作品。" />
+    <meta property="og:image" content="https://zijunlin.github.io/og.png" />
+    <meta property="og:image:width" content="1729" />
+    <meta property="og:image:height" content="910" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Zijun Lin — Creative Developer" />
+    <meta name="twitter:description" content="将想法塑造成可感知的体验。探索创意开发、WebGL 与交互设计作品。" />
+    <meta name="twitter:image" content="https://zijunlin.github.io/og.png" />
+    <title>Zijun Lin — Creative Developer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <canvas id="world" aria-hidden="true"></canvas>
+    <div class="noise" aria-hidden="true"></div>
+    <div class="scroll-progress" aria-hidden="true"></div>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="返回首页"><span class="brand-mark">Z</span><span>Zijun Lin</span></a>
+      <nav aria-label="主导航"><a href="#work">作品</a><a href="#about">关于</a><a href="#site">本站</a><a class="nav-cta" href="https://github.com/zijunlin" target="_blank" rel="noreferrer">GitHub ↗</a></nav>
+    </header>
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="eyebrow"><span></span> Creative developer · Shanghai</div>
+        <h1 id="hero-title">将想法，塑造成<br /><em>可感知的体验。</em></h1>
+        <p class="hero-copy">我关注设计、技术与叙事的交界，构建具有生命感的数字产品与交互体验。</p>
+        <div class="hero-actions"><a class="button button-primary" href="#work">探索作品 <span>↓</span></a><a class="text-link" href="#about">认识我 <span>↗</span></a></div>
+        <div class="hero-index" aria-hidden="true"><span>01</span><i></i><span>03</span></div>
+        <p class="scroll-cue">SCROLL TO EXPLORE</p>
+      </section>
+      <section class="work section-shell" id="work" aria-labelledby="work-title">
+        <div class="section-heading reveal">
+          <p class="section-kicker">02 / Selected explorations</p>
+          <h2 id="work-title">作品与<br />数字实验</h2>
+          <p>在视觉、空间与代码之间，寻找新的表达接口。</p>
+        </div>
+
+        <div class="project-list">
+          <article class="project project-featured reveal" tabindex="0">
+            <div class="project-visual visual-one" aria-hidden="true">
+              <div class="wire-orb"><span></span></div>
+              <p>INTERACTIVE<br />PORTFOLIO</p>
+            </div>
+            <div class="project-meta"><span>01</span><span>WebGL · GLSL · Interaction</span><span>2026</span></div>
+            <h3>Personal Interface</h3>
+            <p class="project-desc">把个人叙事变成一段可探索的数字空间：实时 shader、触觉反馈与响应式排版共同构成本站。</p>
+          </article>
+
+          <article class="project reveal" tabindex="0">
+            <div class="project-visual visual-two" aria-hidden="true">
+              <div class="light-slab slab-a"></div><div class="light-slab slab-b"></div><div class="light-slab slab-c"></div>
+              <span class="visual-label">CONCEPT STUDY / 001</span>
+            </div>
+            <div class="project-meta"><span>02</span><span>Creative coding · Motion</span><span>Lab</span></div>
+            <h3>Chromatic Field</h3>
+            <p class="project-desc">研究光、噪声与节奏关系的创意编程实验，将二维画布转化为不断生长的色彩场。</p>
+          </article>
+
+          <article class="project reveal" tabindex="0">
+            <div class="project-visual visual-three" aria-hidden="true">
+              <div class="portal"><i></i><i></i><i></i><span>∞</span></div>
+              <span class="visual-label">CONCEPT STUDY / 002</span>
+            </div>
+            <div class="project-meta"><span>03</span><span>Interface · Spatial UI</span><span>Lab</span></div>
+            <h3>Spatial Archive</h3>
+            <p class="project-desc">关于未来知识界面的概念研究：让信息不再只是列表，而成为有距离、方向与层级的空间。</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="about section-shell" id="about" aria-labelledby="about-title">
+        <div class="about-index reveal">03 <span>/</span> ABOUT</div>
+        <div class="about-copy reveal">
+          <h2 id="about-title">你好，我是<br /><em>Zijun Lin.</em></h2>
+          <p class="about-lead">一名对新界面与新媒介保持好奇的创意开发者。</p>
+          <div class="about-columns">
+            <p>我喜欢从“如果界面能像生命一样回应，会怎样？”这样的问题出发，用设计建立秩序，用代码赋予它行为。</p>
+            <p>目前关注 WebGL、实时图形、交互设计和 AI 原生体验，也持续记录学习过程与小型实验。</p>
+          </div>
+          <div class="capabilities" aria-label="关注领域">
+            <span>Creative Development</span><span>WebGL / GLSL</span><span>Interaction Design</span><span>AI Prototyping</span>
+          </div>
+        </div>
+        <div class="about-object reveal" aria-hidden="true"><div class="core"></div><div class="ring ring-a"></div><div class="ring ring-b"></div><span>MOVE / THINK / MAKE</span></div>
+      </section>
+
+      <section class="site-note section-shell" id="site" aria-labelledby="site-title">
+        <div class="site-note-card reveal">
+          <div><p class="section-kicker">04 / About this site</p><h2 id="site-title">本站也是<br />一件持续生长的作品。</h2></div>
+          <div class="site-note-copy">
+            <p>没有视频背景，也没有预渲染的 3D 素材。你看到的流体空间由浏览器中的 WebGL fragment shader 实时计算，每一帧都在现场发生。</p>
+            <dl><div><dt>Rendered with</dt><dd>WebGL + GLSL</dd></div><div><dt>Built with</dt><dd>HTML + CSS + JavaScript</dd></div><div><dt>Designed for</dt><dd>Desktop + Touch</dd></div></dl>
+          </div>
+        </div>
+      </section>
+
+      <section class="contact section-shell" aria-labelledby="contact-title">
+        <p class="section-kicker reveal">05 / Start a conversation</p>
+        <h2 id="contact-title" class="reveal">有一个有趣的想法？<br /><a href="https://github.com/zijunlin" target="_blank" rel="noreferrer">一起聊聊。<span>↗</span></a></h2>
+      </section>
+    </main>
+    <footer><a class="brand" href="#top"><span class="brand-mark">Z</span><span>Zijun Lin</span></a><p>Designed &amp; coded with curiosity.</p><p>© <span id="year">2026</span></p></footer>
+    <script src="app.js"></script>
+  </body>
+</html>
