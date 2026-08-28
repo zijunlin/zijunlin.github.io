@@ -43,5 +43,6 @@ test("successful builds publish and verify the canonical Pages URL", async () =>
   assert.match(verificationCommand, /--location/);
   assert.match(verificationCommand, /--retry/);
   assert.match(verificationCommand, /--write-out/);
+  assert.match(verificationCommand, /%\{url_effective\}/);
   assert.match(verificationCommand, /text\/html/);
 });
