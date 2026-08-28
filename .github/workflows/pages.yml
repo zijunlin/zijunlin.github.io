@@ -66,12 +66,35 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: deploy
     runs-on: ubuntu-latest
+    env:
+      DEPLOYED_URL: ${{ needs.deploy.outputs.page_url }}
+      CANONICAL_URL: https://zijunlin.github.io/
     steps:
       - name: Verify deployed site
         run: |
-          curl --fail --silent --show-error \
-            --retry 6 \
-            --retry-delay 5 \
-            --retry-all-errors \
-            --output /dev/null \
-            "${{ needs.deploy.outputs.page_url }}"
+          deployed_url="${DEPLOYED_URL%/}"
+          canonical_url="${CANONICAL_URL%/}"
+
+          if [ "$deployed_url" != "$canonical_url" ]; then
+            echo "Deployment URL does not match the canonical site: $DEPLOYED_URL"
+            exit 1
+          fi
+
+          content_type="$(
+            curl --fail --silent --show-error \
+              --location \
+              --retry 6 \
+              --retry-delay 5 \
+              --retry-all-errors \
+              --output /dev/null \
+              --write-out '%{content_type}' \
+              "$CANONICAL_URL"
+          )"
+
+          case "$content_type" in
+            text/html*) ;;
+            *)
+              echo "Canonical site did not return HTML: $content_type"
+              exit 1
+              ;;
+          esac

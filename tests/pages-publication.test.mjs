@@ -1,13 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parse } from "yaml";
-
-const workflowUrl = new URL("../.github/workflows/pages.yml", import.meta.url);
+import { loadPagesWorkflow } from "./helpers/load-pages-workflow.mjs";
 
 test("successful builds publish and verify the canonical Pages URL", async () => {
-  const source = await readFile(workflowUrl, "utf8");
-  const workflow = parse(source);
+  const workflow = await loadPagesWorkflow();
   const buildJob = workflow.jobs.build;
   const deployJob = workflow.jobs.deploy;
   const verifyJob = workflow.jobs.verify;
@@ -35,13 +31,17 @@ test("successful builds publish and verify the canonical Pages URL", async () =>
     "${{ steps.deployment.outputs.page_url }}"
   );
   assert.equal(verifyJob.needs, "deploy");
-  assert.ok(
-    verifyJob.steps.some(
-      (step) =>
-        step.run?.includes("curl") &&
-        step.run.includes("--fail") &&
-        step.run.includes("--retry") &&
-        step.run.includes("${{ needs.deploy.outputs.page_url }}")
-    )
-  );
+  assert.deepEqual(verifyJob.env, {
+    DEPLOYED_URL: "${{ needs.deploy.outputs.page_url }}",
+    CANONICAL_URL: "https://zijunlin.github.io/"
+  });
+
+  const verificationCommand = verifyJob.steps.find((step) => step.run).run;
+  assert.match(verificationCommand, /DEPLOYED_URL/);
+  assert.match(verificationCommand, /CANONICAL_URL/);
+  assert.match(verificationCommand, /--fail/);
+  assert.match(verificationCommand, /--location/);
+  assert.match(verificationCommand, /--retry/);
+  assert.match(verificationCommand, /--write-out/);
+  assert.match(verificationCommand, /text\/html/);
 });

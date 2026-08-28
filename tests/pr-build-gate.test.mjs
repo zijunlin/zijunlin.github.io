@@ -1,13 +1,9 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { parse } from "yaml";
-
-const workflowUrl = new URL("../.github/workflows/pages.yml", import.meta.url);
+import { loadPagesWorkflow } from "./helpers/load-pages-workflow.mjs";
 
 test("pull requests receive a production contract check without publication", async () => {
-  const source = await readFile(workflowUrl, "utf8");
-  const workflow = parse(source);
+  const workflow = await loadPagesWorkflow();
   const buildJob = workflow.jobs.build;
   const deployJob = workflow.jobs.deploy;
   const configurePages = buildJob.steps.find((step) =>
