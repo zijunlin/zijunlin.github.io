@@ -1,4 +1,4 @@
-// THROWAWAY: three character candidates within the same C world; no final design selected.
+// THROWAWAY: three character candidates within the same C world; C selected; A/B retained for comparison.
 import { regions, worldMarkup } from './protagonist-world.js';
 const candidates = {
   A: {
@@ -28,7 +28,7 @@ const candidates = {
 };
 const stateNames={idle:'默认待机',hover:'入口悬停',selected:'选中入口',panel:'面板展开',preview:'中央预览',closed:'关闭面板'};
 const params=new URLSearchParams(location.search);
-let variant=Object.hasOwn(candidates,params.get('variant'))?params.get('variant'):'A';
+let variant=Object.hasOwn(candidates,params.get('variant'))?params.get('variant'):'C';
 let world=params.get('world')==='system'?'system':'island';
 let layout=params.get('layout')==='B'?'B':'A';
 let state='idle', beforePreview='idle', selected='work', hovered=null, greeting=true, greetingTimer;
