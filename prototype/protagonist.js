@@ -31,7 +31,7 @@ const params=new URLSearchParams(location.search);
 let variant=Object.hasOwn(candidates,params.get('variant'))?params.get('variant'):'A';
 let world=params.get('world')==='system'?'system':'island';
 let layout=params.get('layout')==='B'?'B':'A';
-let state='idle', selected='work', hovered=null, greeting=true, greetingTimer;
+let state='idle', beforePreview='idle', selected='work', hovered=null, greeting=true, greetingTimer;
 const $=selector=>document.querySelector(selector);
 function character(key) {
   const headY={A:-56,B:-70,C:-63}[key];
@@ -75,7 +75,7 @@ function updateScene() {
   const baseX=layout==='A'?320:302;
   const direction=['about','career'].includes(active)?-1:1;
   const moveDirection=['about','career'].includes(selected)?-1:1;
-  const moving=variant==='C'&&['selected','panel','preview'].includes(state);
+  const moving=variant==='C'&&['selected','panel'].includes(state==='preview'?beforePreview:state);
   $('.character-position').style.transform=`translate(${baseX+(moving?moveDirection*24:0)}px, 369px)`;
   const pose=$('#world-scene .character-pose');
   pose.classList.toggle('responding',reacting&&state!=='panel');
@@ -99,7 +99,11 @@ function updateScene() {
   document.querySelectorAll('[data-state]').forEach(el=>el.setAttribute('aria-pressed',String(el.dataset.state===state)));
   $('#status').textContent=`主角 ${variant} · 世界 ${world==='island'?'小岛':'系统空间'} · 布局 ${layout} · ${hovered?'悬停 '+region.label:stateNames[state]} · ${moving?'前景换位 24 单位':'默认站位'} · ${state==='preview'?'对话收起 / 动作暂停':'无强制对话流程'}`;
 }
-function setState(next) {state=next;hovered=null;greeting=false;updateScene();}
+function setState(next) {
+  if(next==='preview'&&state!=='preview') beforePreview=state;
+  state=next;hovered=null;greeting=false;updateScene();
+}
+function closeOverlay() {setState(state==='preview'?beforePreview:'closed');}
 function render() {
   clearTimeout(greetingTimer);
   const item=candidates[variant];
@@ -117,11 +121,11 @@ $('#previous').onclick=()=>cycle(-1);$('#next').onclick=()=>cycle(1);
 document.querySelectorAll('[data-variant]').forEach(el=>el.onclick=()=>changeVariant(el.dataset.variant));
 for(const key of ['world','layout']) $('#'+key).onchange=event=>{if(key==='world')world=event.target.value;else layout=event.target.value;hovered=null;render();};
 document.querySelectorAll('[data-state]').forEach(el=>el.onclick=()=>setState(el.dataset.state));
-document.querySelectorAll('[data-close]').forEach(el=>el.onclick=()=>setState('closed'));
+document.querySelectorAll('[data-close]').forEach(el=>el.onclick=closeOverlay);
 $('#open-preview').onclick=()=>setState('preview');
 document.addEventListener('keydown',event=>{
   if(event.target.closest('input,textarea,select,[contenteditable]'))return;
-  if(event.key==='Escape')setState('closed');
+  if(event.key==='Escape')closeOverlay();
   if(['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();cycle(event.key==='ArrowLeft'?-1:1);}
 });
 document.addEventListener('visibilitychange',()=>$('.stage').classList.toggle('paused',document.hidden));
