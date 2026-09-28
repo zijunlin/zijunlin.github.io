@@ -104,14 +104,14 @@ function scene(style,world) {
   const [ax,ay]=point(90,105);
   return `<svg viewBox="0 0 640 440" role="group" aria-label="${world==='island'?'建筑地形小岛':'抽象系统空间'}，${candidates[style].title}">${materials}<ellipse cx="320" cy="295" rx="231" ry="105" fill="#060d14" opacity=".45"/>${ground(style,world)}<path d="M${point(-100,-62)} L${point(65,-100)} L${point(95,78)} L${point(-60,100)} Z" fill="none" stroke="#8e9a95" stroke-opacity=".25" stroke-dasharray="3 5"/>${objects}<g aria-label="主角占位"><ellipse cx="${ax}" cy="${ay}" rx="12" ry="5" fill="#09121a"/><path d="M${ax-5},${ay-4} v-17 q5,-5 10,0 v17" fill="#8d9da0"/><circle cx="${ax}" cy="${ay-29}" r="5" fill="#bfc7c2"/><text class="sub" x="${ax+19}" y="${ay-5}">主角占位</text></g></svg>`;
 }
-let current='A', pinned=null;
+let current='C', pinned=null;
 function highlight(id) {
   document.querySelectorAll('[data-region]').forEach(el=>{el.classList.toggle('active',el.dataset.region===id);el.setAttribute('aria-pressed',String(el.dataset.region===pinned));});
   const region=regions.find(r=>r.id===id);
   document.querySelector('#interaction').textContent=region?`${pinned?'已固定':'正在比较'}：${region.label} · ${region.sub}。${pinned?'再次点击取消固定。':'两种世界同步高亮。'}`:'悬停任一对象或标签，两种世界同步高亮；点击可固定比较。';
 }
 function render(key,updateURL=true) {
-  current=Object.hasOwn(candidates,key)?key:'A'; pinned=null;
+  current=Object.hasOwn(candidates,key)?key:'C'; pinned=null;
   const item=candidates[current];
   for(const field of ['title','description','geometry','material','highlight','cost']) document.getElementById(field).textContent=item[field];
   for(const world of ['island','system']) { document.getElementById(world).innerHTML=scene(current,world);document.getElementById(`${world}-note`).textContent=item[world]; }
