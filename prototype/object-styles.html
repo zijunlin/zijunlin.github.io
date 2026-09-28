@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex" />
+  <title>世界对象 · 样式研究</title>
+  <link rel="stylesheet" href="/prototype/object-styles.css" />
+</head>
+<body>
+  <!-- THROWAWAY PROTOTYPE: three object languages, paired worlds, fixed layout A; ?variant=A|B|C. -->
+  <header><a href="/">ZIJUN LIN <span>／ 世界对象研究</span></a><small>02 — FORM & MATERIAL STUDY</small></header>
+  <main>
+    <section class="intro"><div><p class="eyebrow">三个候选 · 尚未选定</p><h1 id="title"></h1><p id="description"></p></div><div class="constants">共同条件<span>固定 3/4 正交视角 · A 环绕核心</span><span>雾白 / 石墨灰 / 琥珀 · 静态深蓝灰背景</span><span>相同四区坐标 · 相同主角占位</span></div></section>
+    <section class="worlds" aria-label="两种世界形态比较">
+      <article><div class="world-heading"><h2>建筑地形小岛</h2><span>01 / ISLAND</span></div><div id="island"></div><p id="island-note" class="world-note"></p></article>
+      <article><div class="world-heading"><h2>抽象系统空间</h2><span>02 / SYSTEM</span></div><div id="system"></div><p id="system-note" class="world-note"></p></article>
+    </section>
+    <section class="details" aria-label="方案评估"><div><h3>几何与密度</h3><p id="geometry"></p></div><div><h3>材质方向</h3><p id="material"></p></div><div><h3>交互高亮</h3><p id="highlight"></p></div><div><h3>预期实现成本</h3><p id="cost"></p></div></section>
+    <p class="interaction" id="interaction" aria-live="polite">悬停任一对象或标签，两种世界同步高亮；点击可固定比较。</p>
+    <p class="scope">造型评审原型 · 使用矢量投影示意几何与材质，不代表最终 3D 渲染；成本为相对估计。背景、主角与正式页面另行设计。</p>
+  </main>
+  <nav class="switcher" aria-label="样式方案"><button id="previous" aria-label="上一个方案">←</button><button data-variant="A">A 实体台地</button><button data-variant="B">B 轻型桁架</button><button data-variant="C">C 层叠曲面</button><button id="next" aria-label="下一个方案">→</button></nav>
+  <script type="module" src="/prototype/object-styles.js"></script>
+</body>
+</html>
