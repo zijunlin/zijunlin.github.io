@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>背景视觉案例比较 · 林子钧</title><link rel="stylesheet" href="./backgrounds.css"></head>
+<body>
+<header><a href="/">LIN ZIJUN <span>/ 世界研究</span></a><span>04 — BACKGROUND STUDY</span></header>
+<main>
+  <section class="intro"><p class="eyebrow">三个运行中的背景候选 · 尚未选定</p><h1 id="title"></h1><p id="description"></p></section>
+  <div class="controls">
+    <label>种子 <input id="seed" type="number" min="0" max="999999" step="1"></label><button id="new-seed">换一组种子</button>
+    <label>速度 <input id="speed" type="range" min="0.3" max="1" step="0.1"><output id="speed-value"></output></label>
+    <label>对比 <input id="contrast" type="range" min="0.3" max="1" step="0.1"><output id="contrast-value"></output></label>
+    <label>尺度 <input id="scale" type="range" min="0.7" max="1.3" step="0.1"><output id="scale-value"></output></label>
+    <button id="pause" aria-pressed="false">暂停动态</button><label><input id="fallback" type="checkbox">静态降级</label>
+  </div>
+  <section class="comparison" aria-label="相同背景在两种阅读状态下的比较">
+    <article><div class="scene-heading"><h2>默认世界</h2><span>正常动态 · 世界为主</span></div><div class="scene" id="default-scene"><canvas aria-label="默认动态背景"></canvas><div class="world"></div></div></article>
+    <article><div class="scene-heading"><h2>中央作品预览</h2><span>背景压暗 · 速度降至 20%</span></div><div class="scene preview-scene"><canvas aria-label="降速动态背景"></canvas><div class="world"></div><div class="preview"><p class="eyebrow">精选作品 / 预览占位</p><h3>智能语音平台</h3><div class="diagram">对话内容 <span>→</span> 流转驱动器 <span>→</span> Action</div><p>将对话内容与流转机制分离，用可组合的 Action 支持业务扩展。</p><span class="preview-note">同一文案与浮层尺寸 · 比较阅读干扰</span></div></div></article>
+  </section>
+  <p id="status" role="status"></p>
+  <section class="details"><div><h3>形态与运动</h3><p id="motion"></p></div><div><h3>种子变化边界</h3><p id="randomness"></p></div><div><h3>预期性能成本</h3><p id="cost"></p></div><div><h3>静态降级画面</h3><div class="fallback-swatch"></div><p>固定深蓝灰渐变。勾选“静态降级”可在两幅完整场景中比较；背景不可用时也自动采用此画面。</p></div></section>
+  <p class="scope">可丢弃的视觉比较原型。固定 C 层叠曲面小岛轮廓、A 环绕核心布局、四区标签与主角占位；不实现正式世界或角色。颜色限定深蓝灰与低饱和青灰；没有时段配色或外部数据。</p>
+</main>
+<nav class="switcher" aria-label="背景方案"><button id="previous" aria-label="上一方案">←</button><button data-variant="A">A · 缓慢流体</button><button data-variant="B">B · 斜向光雾</button><button data-variant="C">C · 层叠雾团</button><button id="next" aria-label="下一方案">→</button></nav>
+<script type="module" src="./backgrounds.js"></script>
+</body></html>
