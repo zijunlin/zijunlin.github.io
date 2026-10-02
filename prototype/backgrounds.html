@@ -13,8 +13,8 @@
     <button id="pause" aria-pressed="false">暂停动态</button><label><input id="fallback" type="checkbox">静态降级</label>
   </div>
   <section class="comparison" aria-label="相同背景在两种阅读状态下的比较">
-    <article><div class="scene-heading"><h2>默认世界</h2><span>正常动态 · 世界为主</span></div><div class="scene" id="default-scene"><canvas aria-label="默认动态背景"></canvas><div class="world"></div></div></article>
-    <article><div class="scene-heading"><h2>中央作品预览</h2><span>背景压暗 · 速度降至 20%</span></div><div class="scene preview-scene"><canvas aria-label="降速动态背景"></canvas><div class="world"></div><div class="preview"><p class="eyebrow">精选作品 / 预览占位</p><h3>智能语音平台</h3><div class="diagram">对话内容 <span>→</span> 流转驱动器 <span>→</span> Action</div><p>将对话内容与流转机制分离，用可组合的 Action 支持业务扩展。</p><span class="preview-note">同一文案与浮层尺寸 · 比较阅读干扰</span></div></div></article>
+    <article><div class="scene-heading"><h2>默认世界</h2><span>正常动态 · 世界为主</span></div><div class="scene" id="default-scene"><div class="background-layer"><canvas aria-label="默认动态背景"></canvas></div><div class="world"></div></div></article>
+    <article><div class="scene-heading"><h2>中央作品预览</h2><span>背景压暗 · 速度降至 20%</span></div><div class="scene preview-scene"><div class="background-layer"><canvas aria-label="降速动态背景"></canvas></div><div class="world"></div><div class="preview"><p class="eyebrow">精选作品 / 预览占位</p><h3>智能语音平台</h3><div class="diagram">对话内容 <span>→</span> 流转驱动器 <span>→</span> Action</div><p>将对话内容与流转机制分离，用可组合的 Action 支持业务扩展。</p><span class="preview-note">同一文案与浮层尺寸 · 比较阅读干扰</span></div></div></article>
   </section>
   <p id="status" role="status"></p>
   <section class="details"><div><h3>形态与运动</h3><p id="motion"></p></div><div><h3>种子变化边界</h3><p id="randomness"></p></div><div><h3>预期性能成本</h3><p id="cost"></p></div><div><h3>静态降级画面</h3><div class="fallback-swatch"></div><p>固定深蓝灰渐变。勾选“静态降级”可在两幅完整场景中比较；背景不可用时也自动采用此画面。</p></div></section>
