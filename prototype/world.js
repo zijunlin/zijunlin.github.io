@@ -25,7 +25,10 @@ let currentRoute='';
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
 const background=createBackground($('canvas'),message=>{backgroundStatus=message;$('#runtime').textContent=message;});
 function previewOpen(){return currentRoute==='#work/platform';}
-function currentPanel(){return previewOpen()?'work':currentRoute.slice(1);}
+function currentPanel(){
+  const source=history.state?.previewFrom?.slice(1);
+  return previewOpen()?(Object.hasOwn(titles,source)?source:'work'):currentRoute.slice(1);
+}
 function drawBackground(){background.draw({seed:hash(seed),kind:0,contrast:1,scale:1.1,fallback},elapsed);}
 function canAnimate(){return !document.hidden&&!paused&&!blurred&&!reducedMotion.matches&&!fallback&&background.ready;}
 function animate(now){
@@ -62,17 +65,26 @@ function route(){
   const panel=currentPanel(),preview=previewOpen();hovered=null;
   document.body.classList.toggle('previewing',preview);
   $('#preview').hidden=!preview;$('#panel').hidden=!panel;
+  $('header').inert=preview;$('#panel').inert=preview;$('.world-area').inert=preview;
+  $('#return-directory').textContent='返回'+(titles[panel]||'作品目录');
   if(panel){$('#panel-title').textContent=titles[panel];$('#panel-kicker').textContent=panel==='work'?'精选 · 一个完整案例':'内容目录';$('#panel-content').innerHTML=contents[panel];}
   document.querySelectorAll('header [data-panel]').forEach(el=>{if(el.dataset.panel===panel)el.setAttribute('aria-current','page');else el.removeAttribute('aria-current');});
   resetParallax();updateCharacter();syncAnimation();
 }
 function go(next){
   if(next===currentRoute)return;
-  history.pushState({worldPrototype:true,from:currentRoute},'',location.pathname+location.search+next);route();
+  const isPreview=next==='#work/platform';
+  const sameLevel=Boolean(currentRoute)&&!previewOpen()&&Boolean(next)&&!isPreview;
+  const state=sameLevel
+    ? {worldPrototype:history.state?.worldPrototype===true,from:history.state?.from??null}
+    : {worldPrototype:Boolean(next),from:next?currentRoute:null};
+  if(isPreview)state.previewFrom=currentRoute;
+  const method=sameLevel||!next?'replaceState':'pushState';
+  history[method](state,'',location.pathname+location.search+next);route();
 }
-function openPreview(){if(currentRoute!=='#work')go('#work');go('#work/platform');}
+function openPreview(){if(!currentRoute)go('#work');go('#work/platform');}
 function closeLayer(){
-  const target=previewOpen()?'#work':'';
+  const target=previewOpen()?'#'+currentPanel():'';
   if(history.state?.worldPrototype&&history.state.from===target)history.back();
   else {history.replaceState(null,'',location.pathname+location.search+target);route();}
 }
