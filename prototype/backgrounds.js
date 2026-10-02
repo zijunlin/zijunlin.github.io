@@ -2,7 +2,7 @@
 import { worldMarkup } from './protagonist-world.js';
 import { createBackground } from './backgrounds-renderer.js';
 const candidates={
-  A:{title:'A — 缓慢流体',description:'连续的低频流场，像水下缓慢交换的冷色层次；没有明确光源或中心图案。',motion:'四层低频噪声经过缓慢扭曲，形成连贯的明暗游移。速度默认 0.6×；观察 10–20 秒比较其流动感。',randomness:'种子改变噪声采样偏移、方向（±23°）与蓝灰到青灰的细微色偏。尺度只允许 0.7–1.3×，不生成细碎纹理。',cost:'相对较高：每像素三次四层噪声，共 12 次噪声采样；单次全屏绘制，无贴图。不是硬件性能实测。'},
+  A:{title:'A — 缓慢流体',description:'连续的低频流场，像水下缓慢交换的冷色层次；没有明确光源或中心图案。',motion:'四层低频噪声经过缓慢扭曲，形成连贯的明暗游移。速度定稿 0.8×；观察 10–20 秒比较其流动感。',randomness:'种子改变噪声采样偏移、方向（±23°）与蓝灰到青灰的细微色偏。尺度只允许 0.7–1.3×，不生成细碎纹理。',cost:'相对较高：每像素三次四层噪声，共 12 次噪声采样；单次全屏绘制，无贴图。不是硬件性能实测。'},
   B:{title:'B — 斜向光雾',description:'宽而柔软的斜向光带缓慢漂移，让留白有方向，不形成聚光中心。',motion:'三条宽光雾带缓慢侧移，带边仅有一次低频弯曲。对比和速度沿用同一组控件，便于公平比较。',randomness:'种子改变光带相位、倾角（±23°）与有限青灰色偏；固定三条宽带，不生成细线或高亮扫光。',cost:'相对较低：三次宽带距离衰减与少量三角函数，无多层噪声、无贴图；实际耗时仍取决于设备。'},
   C:{title:'C — 层叠雾团',description:'几层大尺度雾团轻轻交错，强调空气纵深，轮廓比流体更稳定。',motion:'四个宽椭圆雾场以不同慢速漂移并叠加，边缘平滑消散。没有粒子、闪烁或快速涡旋。',randomness:'种子改变雾团初始位置、方向（±23°）与有限青灰色偏；固定四层，不随机增加密度、数量或亮度峰值。',cost:'相对中低：四次椭圆距离衰减与少量三角函数；没有体积步进、透明粒子或额外合成通道。'},
 };
@@ -14,7 +14,7 @@ const bounded=(key,fallback,min,max)=>{
 };
 let variant=Object.hasOwn(candidates,params.get('variant'))?params.get('variant'):'A';
 let seed=Math.floor(bounded('seed',Date.now()%1000000,0,999999));
-const settings={speed:bounded('speed',.6,.3,1),contrast:bounded('contrast',.6,.3,1),scale:bounded('scale',1,.7,1.3),fallback:false};
+const settings={speed:bounded('speed',.8,.3,1),contrast:bounded('contrast',1,.3,1),scale:bounded('scale',1.1,.7,1.3),fallback:false};
 let paused=false, frame=0, last=0;
 const times=[0,0], statuses=['准备中','准备中'];
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
