@@ -28,7 +28,7 @@ test('the selected protagonist keeps a clear foreground station in all four worl
     expect(overlaps(body, await panel.boundingBox())).toBe(false);
     await expect(character).toBeVisible();
     await page.keyboard.press('Escape');
-    expect(await character.boundingBox()).toEqual(body);
+    await expect.poll(() => character.boundingBox()).toEqual(body);
   }
 });
 

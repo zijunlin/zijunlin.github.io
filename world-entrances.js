@@ -26,24 +26,28 @@ function objectTarget(object, camera) {
   return { x: left - 8, y: top - 8, width: right - left + 16, height: bottom - top + 16 };
 }
 
-export function addEntrances(stage, placed, camera, render) {
+export function addEntrances(stage, placed, camera, render, onContextChange) {
   const entrances = [];
-  let hovered, focused, activeId;
+  let hovered, focused, selected, preview = false;
+  let activeId, selectedId, wasPreview;
   function update() {
-    const active = hovered || focused;
-    if (active === activeId) return;
+    const active = hovered || focused || selected;
+    if (active === activeId && selected === selectedId && preview === wasPreview) return;
     activeId = active;
+    selectedId = selected;
+    wasPreview = preview;
     for (const entrance of entrances) {
-      const selected = entrance.id === active;
-      entrance.link.classList.toggle('is-active', selected);
-      entrance.line.classList.toggle('is-active', selected);
-      entrance.description.hidden = !selected;
+      const highlighted = entrance.id === active;
+      entrance.link.classList.toggle('is-active', highlighted);
+      entrance.line.classList.toggle('is-active', highlighted);
+      entrance.description.hidden = !highlighted || preview;
       entrance.object.traverse(mesh => {
         if (!mesh.material) return;
         mesh.material.emissive.set('#d4ac70');
-        mesh.material.emissiveIntensity = selected ? 0.35 : 0;
+        mesh.material.emissiveIntensity = highlighted ? 0.35 : 0;
       });
     }
+    onContextChange({ active, selected });
     render();
   }
   const lines = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -122,5 +126,14 @@ export function addEntrances(stage, placed, camera, render) {
   featured.href = '#work/platform';
   featured.textContent = '精选作品 · 智能语音平台';
   stage.append(featured);
+  function syncRoute() {
+    preview = location.hash === '#work/platform';
+    const route = location.hash.slice(1);
+    selected = preview ? selected || 'work' : entrances.find(entry => entry.id === route)?.id;
+    hovered = focused = undefined;
+    update();
+  }
+  window.addEventListener('hashchange', syncRoute);
+  syncRoute();
+  return () => window.removeEventListener('hashchange', syncRoute);
 }
-

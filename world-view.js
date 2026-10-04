@@ -23,11 +23,12 @@ export async function mountWorldView(container, state) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', presentation.image);
   canvas.setAttribute('aria-description', presentation.description);
-  let renderer, observer, disposeParallax, disposeProtagonist;
+  let renderer, observer, disposeParallax, protagonist, disposeEntrances;
   const scene = new Scene();
   function fail() {
     disposeParallax?.();
-    disposeProtagonist?.();
+    protagonist?.dispose();
+    disposeEntrances?.();
     observer?.disconnect();
     renderer?.dispose();
     scene.traverse(object => { object.geometry?.dispose(); });
@@ -63,10 +64,10 @@ export async function mountWorldView(container, state) {
     await renderer.compileAsync(scene, camera);
     renderer.render(scene, camera);
     stage.append(canvas);
-    disposeProtagonist = mountProtagonist(stage, layout);
-    addEntrances(stage, placed, camera, () => {
+    protagonist = mountProtagonist(stage, layout);
+    disposeEntrances = addEntrances(stage, placed, camera, () => {
       try { renderer.render(scene, camera); } catch { fail(); }
-    });
+    }, protagonist.respond);
     // Render on interaction and resize, without a second animation loop.
     observer = new ResizeObserver(() => {
       try {

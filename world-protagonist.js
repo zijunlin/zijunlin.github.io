@@ -8,7 +8,13 @@ export function mountProtagonist(stage, layout) {
     ${protagonistArt}
   </svg>`;
   const character = slot.firstElementChild;
-  character.style.left = `${((layout === 'A' ? 320 : 302) - 24) / 640 * 100}%`;
+  const restingX = layout === 'A' ? 320 : 302;
+  function respond({ active, selected }) {
+    const offset = selected ? (['about', 'career'].includes(selected) ? -24 : 24) : 0;
+    character.style.left = `${(restingX + offset - 24) / 640 * 100}%`;
+    character.classList.toggle('is-responding', Boolean(active));
+  }
+  respond({});
   stage.append(slot);
   const controller = new AbortController();
   const { signal } = controller;
@@ -23,5 +29,5 @@ export function mountProtagonist(stage, layout) {
   document.addEventListener('visibilitychange', sync, { signal });
   window.addEventListener('hashchange', sync, { signal });
   sync();
-  return () => { controller.abort(); slot.remove(); };
+  return { respond, dispose() { controller.abort(); slot.remove(); } };
 }

@@ -265,12 +265,19 @@ nav .is-current {
 .world-description {
   position: absolute;
   z-index: 3;
-  top: 84%;
-  left: 5%;
-  width: 90%;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  padding: 4px 10px;
+  border: 1px solid #687c8355;
+  border-radius: 4px;
+  background: #20333de8;
   text-align: center;
-  font-size: 12px;
-  color: #d5dfdf;
+  font-size: 11px;
+  line-height: 16px;
+  color: #d1c7b1;
   pointer-events: none;
 }
 
@@ -315,6 +322,7 @@ nav .is-current {
   width: 7.5%;
   height: 20.454545%;
   overflow: visible;
+  transition: left 0.5s ease;
 }
 
 .world-protagonist .head {
@@ -323,6 +331,7 @@ nav .is-current {
 }
 
 .world-protagonist-slot.is-paused .head { animation-play-state: paused; }
+.world-protagonist.is-responding .head { animation: none; transform: rotate(-5deg); }
 
 @keyframes protagonist-consider {
   0%, 80%, 100% { transform: rotate(0); }
@@ -331,6 +340,7 @@ nav .is-current {
 
 @media (prefers-reduced-motion: reduce) {
   .world-protagonist .head { animation: none; }
+  .world-protagonist { transition: none; }
 }
 
 nav a {
