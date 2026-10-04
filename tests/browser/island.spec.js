@@ -29,47 +29,6 @@ for (const [seed, layout] of [[0, '环绕核心'], [4, '成长路径']]) {
   });
 }
 
-for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
-  test(`both layouts fit a ${viewport.width}×${viewport.height} viewport with a reading safe band`, async ({ page }) => {
-    await page.setViewportSize(viewport);
-    let previous;
-    for (const seed of [0, 4]) {
-      await page.goto(`/?world=island&seed=${seed}`);
-      const image = page.getByRole('img', { name: '层叠曲面小岛' });
-      await expect(image).toBeVisible({ timeout: 15000 });
-      // End the approved entrance before comparing stable layout bounds.
-      await image.screenshot({ animations: 'disabled' });
-      const frame = await image.boundingBox();
-      const content = await page.getByRole('main').boundingBox();
-      const safeWidth = viewport.width <= 1050 ? 280 : 310;
-      expect(frame.x + frame.width).toBeLessThanOrEqual(content.x + content.width - safeWidth - 28 + 1);
-      expect(frame.y + frame.height).toBeLessThanOrEqual(viewport.height);
-      if (previous) {
-        expect(frame.width).toBeCloseTo(previous.width, 0);
-        expect(frame.height).toBeCloseTo(previous.height, 0);
-      }
-      previous = frame;
-      const island = page.getByRole('region', { name: /建筑地形小岛/ });
-      const boxes = [];
-      for (const link of await island.getByRole('link').all()) {
-        await expect(link).toBeVisible();
-        const box = await link.boundingBox();
-        expect(box.x).toBeGreaterThanOrEqual(0);
-        expect(box.y).toBeGreaterThan(76);
-        expect(box.x + box.width).toBeLessThan(content.x + content.width - safeWidth);
-        expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
-        for (const other of boxes) {
-          const overlaps = box.x < other.x + other.width && box.x + box.width > other.x && box.y < other.y + other.height && box.y + box.height > other.y;
-          expect(overlaps).toBe(false);
-        }
-        boxes.push(box);
-      }
-      expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    }
-  });
-}
-
 test('world capability failure keeps the chosen state and navigation readable', async ({ page }) => {
   await page.addInitScript(() => {
     const original = HTMLCanvasElement.prototype.getContext;

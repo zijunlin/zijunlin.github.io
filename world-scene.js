@@ -16,8 +16,6 @@ export async function mountWorld(container, state) {
   combination.textContent = `${worldName} · ${layoutName}`;
   heading.append(eyebrow, title, combination);
   container.replaceChildren(heading);
-  if (state.world === 'island') {
-    const { mountIsland } = await import('./island.js');
-    await mountIsland(container, state.layout);
-  }
+  const { mountWorldView } = await import('./world-view.js');
+  await mountWorldView(container, state);
 }

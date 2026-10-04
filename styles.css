@@ -179,21 +179,21 @@ nav .is-current {
   height: calc(100svh - var(--header-height));
 }
 
-.island-area {
+.world-area {
   position: absolute;
   inset: 110px calc(var(--panel-width) + 28px) 28px 0;
   display: grid;
   place-items: center;
 }
 
-.island-stage {
+.world-stage {
   position: relative;
   width: min(100%, calc((100svh - var(--header-height) - 138px) * 1.454545));
   aspect-ratio: 640 / 440;
 }
 
-.island-stage canvas,
-.island-connectors {
+.world-stage canvas,
+.world-connectors {
   position: absolute;
   inset: 0;
   display: block;
@@ -202,11 +202,11 @@ nav .is-current {
   pointer-events: none;
 }
 
-.island-stage canvas {
+.world-stage canvas {
   z-index: 1;
 }
 
-.island-connectors {
+.world-connectors {
   z-index: 0;
   fill: none;
   stroke: #6e8286;
@@ -215,8 +215,8 @@ nav .is-current {
   opacity: 0.6;
 }
 
-.island-label,
-.island-featured {
+.world-label,
+.world-featured {
   position: absolute;
   z-index: 2;
   text-decoration: none;
@@ -227,20 +227,20 @@ nav .is-current {
   font-size: 13px;
 }
 
-.island-featured {
+.world-featured {
   left: 50%;
   top: 94%;
   color: #dab680;
   font-size: 12px;
 }
 
-.island-label:focus-visible,
-.island-featured:focus-visible {
+.world-label:focus-visible,
+.world-featured:focus-visible {
   outline: 1px solid #dab680;
   outline-offset: 2px;
 }
 
-.island-unavailable {
+.world-unavailable {
   color: #a5b8c0;
   font-size: 13px;
   line-height: 1.8;

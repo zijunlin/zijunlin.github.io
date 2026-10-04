@@ -1,19 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { PNG } from 'pngjs';
-
-// Compare average channel intensity, allowing rasterization noise rather than
-// requiring exact pixels or a golden screenshot of the artwork.
-function imageDifference(first, second) {
-  const a = PNG.sync.read(first), b = PNG.sync.read(second);
-  expect([a.width, a.height]).toEqual([b.width, b.height]);
-  let difference = 0;
-  for (let i = 0; i < a.data.length; i += 4) {
-    for (let channel = 0; channel < 3; channel++) {
-      difference += Math.abs(a.data[i + channel] - b.data[i + channel]);
-    }
-  }
-  return difference / (a.width * a.height * 3);
-}
+import { imageDifference } from '../helpers/image-difference.mjs';
 
 // Sample the reserved right reading band: screenshots of a transparent
 // background canvas also include foreground geometry, which is not this test.
