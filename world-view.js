@@ -1,6 +1,7 @@
 import { Scene, OrthographicCamera, WebGLRenderer, HemisphereLight, DirectionalLight, PCFSoftShadowMap } from 'three';
 import { buildWorldGeometry } from './world-geometry.js';
 import { addEntrances } from './world-entrances.js';
+import { mountWorldParallax } from './world-parallax.js';
 
 const presentations = {
   island: { name: '建筑地形小岛', shortName: '小岛世界', image: '层叠曲面小岛', description: '圆形居所、职业历程步道、中央工坊与下沉庭园。' },
@@ -21,9 +22,10 @@ export async function mountWorldView(container, state) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', presentation.image);
   canvas.setAttribute('aria-description', presentation.description);
-  let renderer, observer;
+  let renderer, observer, disposeParallax;
   const scene = new Scene();
   function fail() {
+    disposeParallax?.();
     observer?.disconnect();
     renderer?.dispose();
     scene.traverse(object => { object.geometry?.dispose(); });
@@ -59,6 +61,10 @@ export async function mountWorldView(container, state) {
     await renderer.compileAsync(scene, camera);
     renderer.render(scene, camera);
     stage.append(canvas);
+    const characterSlot = document.createElement('div');
+    characterSlot.className = 'world-protagonist-slot';
+    characterSlot.setAttribute('aria-hidden', 'true');
+    stage.append(characterSlot);
     addEntrances(stage, placed, camera, () => {
       try { renderer.render(scene, camera); } catch { fail(); }
     });
@@ -72,6 +78,7 @@ export async function mountWorldView(container, state) {
       } catch { fail(); }
     });
     observer.observe(stage);
+    disposeParallax = mountWorldParallax(stage, document.getElementById('shader-canvas'));
     canvas.addEventListener('webglcontextlost', fail, { once: true });
   } catch { fail(); }
 }
