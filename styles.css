@@ -99,3 +99,70 @@ nav .is-current {
     font-size: 0.69rem;
   }
 }
+
+
+[hidden] {
+  display: none !important;
+}
+
+/* Start the threshold when the document is styled, including while JavaScript
+   is downloading. A completed initialization hides this before it can appear. */
+#world-loading {
+  position: absolute;
+  inset: calc(var(--header-height) + 90px) 0 106px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  visibility: hidden;
+  animation: reveal-loading 0s 400ms forwards;
+  color: #a5b8c0;
+  font-size: 12px;
+}
+
+#world-loading svg {
+  width: 65%;
+  max-width: 430px;
+  fill: none;
+  stroke: #647e8b;
+  stroke-width: 1;
+  opacity: 0.5;
+}
+
+@keyframes reveal-loading {
+  to { visibility: visible; }
+}
+
+.scene-heading {
+  padding-top: 18px;
+}
+
+.eyebrow {
+  color: #c9a976;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.scene-heading h1,
+#world-error h1 {
+  margin: 12px 0;
+  color: #d7dfda;
+  font-size: 25px;
+  font-weight: 400;
+}
+
+#world-entry.entering {
+  animation: world-arrive 650ms ease-out both;
+}
+
+@keyframes world-arrive {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+#world-error {
+  padding-top: 90px;
+  text-align: center;
+  color: #a5b8c0;
+  font-size: 12px;
+}

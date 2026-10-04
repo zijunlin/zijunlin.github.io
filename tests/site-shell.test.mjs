@@ -25,7 +25,7 @@ test("production artifact exposes the shader-backed shell", async () => {
   assert.match(html, /关于/);
   assert.match(html, /本站/);
   assert.equal((html.match(/<main\b/g) ?? []).length, 1);
-  assert.match(html, /<main\b[^>]*>\s*<\/main>/);
+  assert.match(html, /正在构建世界/);
   assert.match(
     html,
     /<canvas\b(?=[^>]*\bid="shader-canvas")(?=[^>]*\baria-hidden="true")[^>]*><\/canvas>/
@@ -34,6 +34,6 @@ test("production artifact exposes the shader-backed shell", async () => {
   assert.doesNotMatch(html, /fonts\.googleapis|fonts\.gstatic/i);
   assert.match(stylesheet, /radial-gradient/);
   assert.match(stylesheet, /pointer-events:none/);
-  assert.doesNotMatch(stylesheet, /@keyframes|animation:/);
+  assert.match(stylesheet, /@keyframes/);
   await access(new URL(".nojekyll", buildRoot));
 });

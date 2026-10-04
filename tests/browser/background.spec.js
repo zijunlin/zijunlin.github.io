@@ -50,9 +50,9 @@ for (const failure of ['unavailable', 'throws', 'compile', 'link']) {
     await expect(page.locator('canvas')).toBeHidden();
     await expect(page.getByRole('navigation', { name: '主目录' })).toBeVisible();
     expect(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundImage)).toContain('radial-gradient');
-    const first = await page.screenshot();
+    const first = await page.screenshot({ animations: 'disabled' });
     await page.waitForTimeout(300);
-    expect(imageDifference(first, await page.screenshot())).toBeLessThan(0.05);
+    expect(imageDifference(first, await page.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
     expect(errors).toEqual([]);
   });
 }
