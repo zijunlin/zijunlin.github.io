@@ -63,69 +63,71 @@ export function buildWorldGeometry(scene, { world, layout }) {
   const path = new CatmullRomCurve3(pathPoints.map(([x, z]) => new Vector3(x, 2, z)), layout === 'A', 'centripetal');
   add(new TubeGeometry(path, 96, world === 'island' ? 1.5 : 0.8, 8, layout === 'A'), world === 'island' ? '#82958c' : '#6c919e', 0, 0, 0);
 
-  const drawObjects = world === 'island' ? buildIslandObjects : buildSystemObjects;
-  drawObjects(placed, { drum, ring });
+  const objects = world === 'island' ? islandObjects : systemObjects;
+  for (const { id, x, z } of placed) objects[id](x, z, { drum, ring });
   return placed;
 }
 
-function buildIslandObjects(placed, { drum, ring }) {
-  for (const { id, x, z } of placed) {
-    if (id === 'about') {
-      drum(x, z, 0, 24, 12, '#798b8e');
-      drum(x, z, 12, 17, 39, '#bcc5c1');
-      drum(x, z, 51, 20, 3, '#d2d6cc');
-      ring(x, z, 56, 9, 1, '#d4ac70');
-    } else if (id === 'work') {
-      drum(x, z, 0, 42, 10, '#74878a');
-      drum(x, z, 12, 34, 17, '#bcc5c1');
-      drum(x, z, 32, 25, 16, '#dedfd3');
-      drum(x, z, 48, 17, 1, '#334950');
-      ring(x, z, 50, 11, 2, '#bda574');
-    } else if (id === 'career') {
-      ring(x, z, 4, 34, 3.5, '#798b8e');
-      for (let i = 0; i < 5; i++) {
-        const angle = i * Math.PI / 2.5;
-        drum(x + Math.cos(angle) * 34, z + Math.sin(angle) * 34, 4, 3, 4, '#cfaa73');
-      }
-    } else {
-      drum(x, z, 0, 26, 6, '#687c79');
-      drum(x, z, 6, 19, 0.5, '#334b46');
-      ring(x, z, 7, 19, 1.5, '#94a39a');
-      ring(x, z, 9, 10, 0.5, '#798b8e');
+const islandObjects = {
+  about(x, z, { drum, ring }) {
+    drum(x, z, 0, 24, 12, '#798b8e');
+    drum(x, z, 12, 17, 39, '#bcc5c1');
+    drum(x, z, 51, 20, 3, '#d2d6cc');
+    ring(x, z, 56, 9, 1, '#d4ac70');
+  },
+  work(x, z, { drum, ring }) {
+    drum(x, z, 0, 42, 10, '#74878a');
+    drum(x, z, 12, 34, 17, '#bcc5c1');
+    drum(x, z, 32, 25, 16, '#dedfd3');
+    drum(x, z, 48, 17, 1, '#334950');
+    ring(x, z, 50, 11, 2, '#bda574');
+  },
+  career(x, z, { drum, ring }) {
+    ring(x, z, 4, 34, 3.5, '#798b8e');
+    for (let i = 0; i < 5; i++) {
+      const angle = i * Math.PI / 2.5;
+      drum(x + Math.cos(angle) * 34, z + Math.sin(angle) * 34, 4, 3, 4, '#cfaa73');
     }
-  }
-}
+  },
+  notes(x, z, { drum, ring }) {
+    drum(x, z, 0, 26, 6, '#687c79');
+    drum(x, z, 6, 19, 0.5, '#334b46');
+    ring(x, z, 7, 19, 1.5, '#94a39a');
+    ring(x, z, 9, 10, 0.5, '#798b8e');
+  },
+};
 
-function buildSystemObjects(placed, { drum, ring }) {
-  for (const { id, x, z } of placed) {
-    if (id === 'about') {
-      // An open identity node, not the dwelling's enclosed cylinder and roof.
-      drum(x, z, 0, 24, 3, '#334c58');
-      drum(x, z, 3, 4, 46, '#526d78');
-      ring(x, z, 12, 20, 2.5, '#ccd8d5');
-      ring(x, z, 40, 17, 2.3, '#ccd8d5');
-      ring(x, z, 54, 9, 1, '#d4ac70');
-    } else if (id === 'career') {
-      // Concentric traces and discrete amber contacts form the time bus.
-      ring(x, z, 4, 34, 1.5, '#b9ccce');
-      ring(x, z, 4, 28, 1, '#587c8b');
-      for (let i = 0; i < 5; i++) {
-        const angle = i * Math.PI / 2.5;
-        drum(x + Math.cos(angle) * 34, z + Math.sin(angle) * 34, 4, 3, 2, '#cfaa73');
-      }
-    } else if (id === 'work') {
-      // Thin ceramic modules float around one axis, separated by open gaps.
-      drum(x, z, 0, 42, 4, '#334c58');
-      drum(x, z, 4, 6, 46, '#a6bfc3');
-      drum(x, z, 14, 34, 3, '#d1dcd9');
-      drum(x, z, 30, 25, 4, '#e0e7de');
-      ring(x, z, 45, 17, 2.4, '#78949c');
-      ring(x, z, 54, 11, 1.5, '#d4ac70');
-    } else {
-      // Empty rings reserve an experiment area without inventing content.
-      drum(x, z, 0, 26, 3, '#263e49');
-      ring(x, z, 8, 19, 1.5, '#9bb4ba');
-      ring(x, z, 11, 10, 0.7, '#688994');
+const systemObjects = {
+  about(x, z, { drum, ring }) {
+    // An open identity node, not the dwelling's enclosed cylinder and roof.
+    drum(x, z, 0, 24, 3, '#334c58');
+    drum(x, z, 3, 4, 46, '#526d78');
+    ring(x, z, 12, 20, 2.5, '#ccd8d5');
+    ring(x, z, 40, 17, 2.3, '#ccd8d5');
+    ring(x, z, 54, 9, 1, '#d4ac70');
+  },
+  career(x, z, { drum, ring }) {
+    // Concentric traces and discrete amber contacts form the time bus.
+    ring(x, z, 4, 34, 1.5, '#b9ccce');
+    ring(x, z, 4, 28, 1, '#587c8b');
+    for (let i = 0; i < 5; i++) {
+      const angle = i * Math.PI / 2.5;
+      drum(x + Math.cos(angle) * 34, z + Math.sin(angle) * 34, 4, 3, 2, '#cfaa73');
     }
-  }
-}
+  },
+  work(x, z, { drum, ring }) {
+    // Thin ceramic modules float around one axis, separated by open gaps.
+    drum(x, z, 0, 42, 4, '#334c58');
+    drum(x, z, 4, 6, 46, '#a6bfc3');
+    drum(x, z, 14, 34, 3, '#d1dcd9');
+    drum(x, z, 30, 25, 4, '#e0e7de');
+    ring(x, z, 45, 17, 2.4, '#78949c');
+    ring(x, z, 54, 11, 1.5, '#d4ac70');
+  },
+  notes(x, z, { drum, ring }) {
+    // Empty rings reserve an experiment area without inventing content.
+    drum(x, z, 0, 26, 3, '#263e49');
+    ring(x, z, 8, 19, 1.5, '#9bb4ba');
+    ring(x, z, 11, 10, 0.7, '#688994');
+  },
+};
