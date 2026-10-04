@@ -24,6 +24,11 @@ function mixSeed(value) {
   return (n ^ (n >>> 16)) >>> 0;
 }
 
+const requestedWorld = new URLSearchParams(location.search).get('world');
+const worldOverride = requestedWorld === 'island' || requestedWorld === 'system'
+  ? requestedWorld
+  : null;
+
 const seed = entrySeed();
 const randomBits = mixSeed(seed);
 // Xor-shifts and multiplication by an odd integer are bijective on 32 bits.
@@ -35,7 +40,7 @@ const layoutRandom = (randomBits >>> 16) / 65536;
 
 export const worldState = Object.freeze({
   seed,
-  world: worldRandom < 0.5 ? 'island' : 'system',
+  world: worldOverride ?? (worldRandom < 0.5 ? 'island' : 'system'),
   layout: layoutRandom < 0.5 ? 'A' : 'B',
   backgroundSeed: randomBits / 4294967296,
 });

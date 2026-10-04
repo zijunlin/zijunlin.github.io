@@ -97,3 +97,51 @@ test('blocked storage still gives background and scene a usable entry', async ({
   await expect(page.getByLabel('世界形态与空间布局')).toHaveText('抽象系统空间 · 成长路径');
   await expect(page.getByRole('alert')).toBeHidden();
 });
+
+test('the world URL overrides form while preserving the seeded layout', async ({ page }) => {
+  for (const [seed, layout] of [[2, '环绕核心'], [3, '成长路径']]) {
+    await page.goto(`/?seed=${seed}&world=island`);
+    await expect(page.getByLabel('世界形态与空间布局')).toHaveText(`建筑地形小岛 · ${layout}`);
+  }
+  for (const [seed, layout] of [[0, '环绕核心'], [4, '成长路径']]) {
+    await page.goto(`/?seed=${seed}&world=system`);
+    await expect(page.getByLabel('世界形态与空间布局')).toHaveText(`抽象系统空间 · ${layout}`);
+  }
+});
+
+test('missing and invalid world values retain automatic selection', async ({ page }) => {
+  for (const value of [null, '', 'ocean', 'ISLAND', ' system ', '%']) {
+    for (const [seed, expected] of [[2, '抽象系统空间 · 环绕核心'], [4, '建筑地形小岛 · 成长路径']]) {
+      const query = new URLSearchParams({ seed: String(seed) });
+      if (value !== null) query.set('world', value);
+      await page.goto(`/?${query}`);
+      await expect(page.getByLabel('世界形态与空间布局')).toHaveText(expected);
+      await expect(page.getByRole('alert')).toBeHidden();
+    }
+  }
+});
+
+test('explicit links survive reload without replacing the automatic session choice', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-04T10:00:00Z'));
+  await page.goto('/?world=island');
+  const combination = page.getByLabel('世界形态与空间布局');
+  await expect(combination).toHaveText('建筑地形小岛 · 成长路径');
+  await page.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
+  await page.reload();
+  await expect(combination).toHaveText('建筑地形小岛 · 成长路径');
+  await page.goto('/?world=system');
+  await expect(combination).toHaveText('抽象系统空间 · 成长路径');
+  await page.reload();
+  await expect(combination).toHaveText('抽象系统空间 · 成长路径');
+  await page.goto('/');
+  await expect(combination).toHaveText('抽象系统空间 · 成长路径');
+});
+
+test('public pages have no world or layout switching controls', async ({ page }) => {
+  await page.goto('/?world=island');
+  await expect(page.getByLabel('世界形态与空间布局')).toBeVisible();
+  await expect(page.getByRole('combobox')).toHaveCount(0);
+  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /世界|布局|小岛|系统空间|环绕核心|成长路径/ })).toHaveCount(0);
+  await expect(page.locator('a[href*="world="]')).toHaveCount(0);
+});
