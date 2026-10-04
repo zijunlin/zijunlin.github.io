@@ -1,3 +1,5 @@
+import { worldState } from './world-state.js';
+
 // Selected A fluid field from the approved visual integration prototype.
 const vertexSource = `attribute vec2 position;
 void main(){gl_Position=vec4(position,0.0,1.0);}`;
@@ -30,30 +32,7 @@ void main(){
  gl_FragColor=vec4(base+tint*clamp(value,0.,1.)*vignette,1.);
 }`;
 
-// Mix the entry timestamp; clock hours have no visual meaning.
-function mixSeed(value) {
-  let n = value | 0;
-  n = Math.imul(n ^ (n >>> 16), 0x45d9f3b);
-  n = Math.imul(n ^ (n >>> 16), 0x45d9f3b);
-  return ((n ^ (n >>> 16)) >>> 0) / 4294967296;
-}
-
-function entrySeed() {
-  const supplied = new URLSearchParams(location.search).get('seed');
-  if (supplied?.trim() && Number.isFinite(Number(supplied))) {
-    return Math.max(0, Math.min(999999, Math.floor(Number(supplied))));
-  }
-  const timestamp = Date.now();
-  try {
-    const stored = sessionStorage.getItem('world-entry-seed');
-    if (stored?.trim() && Number.isFinite(Number(stored))) return Number(stored);
-    sessionStorage.setItem('world-entry-seed', String(timestamp));
-  } catch { /* Storage restrictions must not prevent rendering. */ }
-  return timestamp;
-}
-
 function startBackground(canvas) {
-  const seed = entrySeed();
   canvas.dataset.motion = 'static';
   let gl, program, buffer;
   const shaders = [];
@@ -97,7 +76,7 @@ function startBackground(canvas) {
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     const resolution = gl.getUniformLocation(program, 'resolution');
     const time = gl.getUniformLocation(program, 'time');
-    gl.uniform1f(gl.getUniformLocation(program, 'seed'), mixSeed(seed));
+    gl.uniform1f(gl.getUniformLocation(program, 'seed'), worldState.backgroundSeed);
     let elapsed = 0, last = performance.now();
     let pageActive = true;
     function canRun() {
