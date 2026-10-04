@@ -392,3 +392,12 @@ nav a:focus-visible {
 .reading-panel-body ul { padding-left: 20px; }
 .reading-panel-body li { margin-bottom: 10px; }
 .about-contacts { display: flex; flex-wrap: wrap; gap: 16px; }
+
+.timeline-intro { margin-top: 20px; color: #a6b7bd; }
+.career-timeline { list-style: none; padding: 0; margin: 24px 0 0; }
+.career-timeline li { position: relative; margin: 0 0 0 5px; padding: 0 0 25px 19px; border-left: 1px solid #60717a; }
+.career-timeline li:last-child { padding-bottom: 0; border-left-color: transparent; }
+.career-timeline li::before { content: ''; position: absolute; left: -4px; top: 8px; width: 7px; height: 7px; border-radius: 50%; background: #dfbf8b; }
+.career-timeline time { color: #dfbf8b; font-size: 12px; letter-spacing: 1px; }
+.career-timeline h3 { margin-top: 3px; font-size: 15px; }
+.career-timeline p { margin: 8px 0; }

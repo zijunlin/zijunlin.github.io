@@ -1,18 +1,8 @@
-// About is a non-modal reading region: navigation and world entrances remain usable.
-export function mountAboutPanel(container) {
-  const panel = document.createElement('aside');
-  panel.className = 'reading-panel';
-  panel.setAttribute('role', 'region');
-  panel.setAttribute('aria-labelledby', 'about-panel-title');
-  panel.hidden = true;
-  panel.innerHTML = `
-    <header class="reading-panel-header">
-      <h2 id="about-panel-title" tabindex="-1">关于我</h2>
-      <a href="#" aria-label="关闭关于我" class="reading-panel-close">关闭 ×</a>
-    </header>
-    <div class="reading-panel-body">
+export const readingPanels = {
+  about: { title: "关于我", content: `
       <h3>林子钧</h3>
       <p class="about-role">曾任阿里巴巴 P7 技术专家</p>
+      <p><a href="#career">查看职业历程 →</a></p>
       <p>拥有十余年阿里巴巴研发经验，长期扎根一线开发，持续从事核心系统研发与架构设计。从移动端到服务端与平台建设，经历移动互联网、云原生与 AI 时代的技术演进，在实践中不断拓展技术视野。</p>
       <p>擅长从业务出发，将复杂问题抽象为职责清晰、边界明确的软件系统。在架构设计中，关注核心业务与基础设施的分离，以及通用能力与差异化需求之间的平衡，让系统既能解决当下的问题，也能适应长期变化。</p>
       <p>曾主导智能语音平台的整体架构、核心系统设计与关键研发，推动对话沟通引擎升级，并通过渐进式迁移完成数百个客户的切换。这段经历让我持续思考：如何在业务运行与增长的过程中，让系统保持可靠，并不断演进。</p>
@@ -31,43 +21,14 @@ export function mountAboutPanel(container) {
         <a href="https://github.com/zijunlin" target="_blank" rel="noopener noreferrer">GitHub ↗</a>
         <a href="https://www.linkedin.com/in/子钧-林-441281a2" target="_blank" rel="noopener noreferrer">LinkedIn ↗</a>
       </div>
-    </div>`;
-  container.append(panel);
-  const title = panel.querySelector('h2');
-  const home = document.querySelector('nav a[href="#"]');
-  const about = document.querySelector('nav a[href="#about"]');
-  let returnFocus = about;
-  document.addEventListener('click', event => {
-    if (event.target.closest('a') === home) returnFocus = home;
-    const link = event.target.closest('a[href="#about"]');
-    if (!link) return;
-    // Object targets focus their semantic label before this delegated handler runs.
-    returnFocus = document.activeElement?.matches('a[href="#about"]') ? document.activeElement : link;
-    if (!panel.hidden) title.focus({ preventScroll: true });
-  });
-  function sync() {
-    const open = location.hash === '#about';
-    const wasOpen = !panel.hidden;
-    panel.hidden = !open;
-    for (const [link, current] of [[home, !location.hash], [about, open]]) {
-      link.classList.toggle('is-current', current);
-      if (current) link.setAttribute('aria-current', 'page');
-      else link.removeAttribute('aria-current');
-    }
-    if (open && !wasOpen) {
-      panel.querySelector('.reading-panel-body').scrollTop = 0;
-      title.focus({ preventScroll: true });
-    } else if (!open && wasOpen && !location.hash) {
-      (returnFocus.isConnected ? returnFocus : about).focus({ preventScroll: true });
-    }
-  }
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !panel.hidden) {
-      event.preventDefault();
-      location.hash = '';
-    }
-  });
-  window.addEventListener('hashchange', sync);
-  window.addEventListener('popstate', sync);
-  sync();
-}
+    ` },
+  career: { title: '职业历程', content: `
+    <p class="timeline-intro">从移动端到平台建设，再到 AI 探索。</p>
+    <ol class="career-timeline">
+      <li><time datetime="2013">2013</time><h3>来往</h3><p>负责 Android 客户端开发，投身移动互联网。</p></li>
+      <li><time datetime="2016">2016</time><h3>点点虫</h3><p>负责视频 App 开发，同时轮岗后端，拓展全栈实践。</p></li>
+      <li><time datetime="2017">2017</time><h3>菜鸟 · 裹裹</h3><p>负责裹裹 App 客户端开发。</p></li>
+      <li><time datetime="2019">2019</time><h3>智能语音平台</h3><p>负责平台建设、整体架构与核心系统研发。</p><a href="#work/platform">查看关联作品：智能语音平台 ↗</a></li>
+      <li><time datetime="2026">2026</time><h3>AI 探索</h3><p>关注大模型能力如何融入真实业务，持续探索 AI 工程与产品。</p></li>
+    </ol>` },
+};
