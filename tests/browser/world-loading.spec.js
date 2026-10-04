@@ -63,6 +63,11 @@ test('the outline stays hidden for about 400ms even while scripts download', asy
 });
 
 test('fast initialization skips the loading message and plays a brief entrance once', async ({ page }) => {
+  // Exercise the fast scene path without software-GPU startup turning it into
+  // a genuinely slow initialization. Dynamic rendering is covered separately.
+  await page.addInitScript(() => {
+    HTMLCanvasElement.prototype.getContext = () => null;
+  });
   await observeLoading(page);
   await page.goto('/');
   const heading = page.getByRole('heading', { name: '在构建中，保持好奇。' });
