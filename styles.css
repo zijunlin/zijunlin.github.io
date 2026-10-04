@@ -452,3 +452,43 @@ nav a:focus-visible {
 .career-timeline time { color: #dfbf8b; font-size: 12px; letter-spacing: 1px; }
 .career-timeline h3 { margin-top: 3px; font-size: 15px; }
 .career-timeline p { margin: 8px 0; }
+
+.work-preview {
+  width: min(620px, calc(100vw - 64px));
+  max-height: calc(100svh - 48px);
+  margin: auto;
+  padding: 28px 32px;
+  overflow-y: auto;
+  border: 1px solid #899b9e;
+  border-radius: 10px;
+  background: #23313b;
+  color: #e0e6df;
+  box-shadow: 0 24px 90px #0008;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.work-preview::backdrop { background: #060c1399; }
+.work-preview h2 { margin: 10px 0 22px; font-size: 28px; font-weight: 500; }
+.work-preview .eyebrow { margin: 0 70px 0 0; font-size: 11px; }
+.work-preview button, .preview-actions a {
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  border: 1px solid #70818a;
+  border-radius: 4px;
+  background: transparent;
+  color: #dce3df;
+  padding: 7px 12px;
+  text-decoration: none;
+}
+.work-preview .preview-close { position: absolute; top: 18px; right: 20px; border: 0; padding: 4px; }
+.work-preview :focus-visible { outline: 2px solid #dfbf8b; outline-offset: 3px; }
+.preview-structure { display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 10px; padding: 22px 12px; border: 1px solid #59717c; border-radius: 5px; background: #14232e; color: #e0bc87; text-align: center; }
+.preview-structure small { display: block; margin-top: 5px; color: #98acb5; font-size: 11px; }
+.preview-structure b { font-weight: 400; }
+.preview-summary { margin: 20px 0 12px; }
+.preview-responsibility { color: #b8c8cd; font-size: 13px; }
+.preview-tags { display: flex; gap: 8px; margin: 18px 0; padding: 0; list-style: none; color: #b8c8cd; font-size: 11px; }
+.preview-tags li { padding: 2px 8px; border: 1px solid #60727c; border-radius: 3px; }
+.preview-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; }
+.preview-actions a { background: #dfbf8b; border-color: #dfbf8b; color: #14212a; }

@@ -41,6 +41,8 @@ export function mountReadingPanels(container) {
     if (entry === active) entry.title.focus({ preventScroll: true });
   });
   function sync() {
+    // A popup overlays the existing reading context rather than replacing it.
+    if (location.hash === '#work/platform') return;
     const next = panels.get(location.hash);
     const previous = active;
     for (const entry of panels.values()) entry.panel.hidden = entry !== next;
@@ -70,7 +72,7 @@ export function mountReadingPanels(container) {
     homeRequested = false;
   }
   document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && active) {
+    if (event.key === 'Escape' && active && location.hash !== '#work/platform') {
       event.preventDefault();
       location.hash = active.close.getAttribute('href').slice(1);
     }

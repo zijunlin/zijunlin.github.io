@@ -1,5 +1,6 @@
 import { worldState } from './world-state.js';
 import { mountReadingPanels } from './reading-panels.js';
+import { mountWorkPreview } from './work-preview.js';
 
 // Completion is driven by scene loading and mounting, never by a minimum wait.
 const content = document.getElementById('content');
@@ -22,4 +23,5 @@ async function enterWorld() {
 }
 
 mountReadingPanels(content);
+mountWorkPreview();
 void enterWorld();

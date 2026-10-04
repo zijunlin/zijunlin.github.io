@@ -89,7 +89,7 @@ function startBackground(canvas) {
         const delta = now - last;
         if (delta >= 1000 / 30) {
           last = now;
-          elapsed += Math.min(delta / 1000, 0.1) * 0.8;
+          elapsed += Math.min(delta / 1000, 0.1) * 0.8 * (location.hash === '#work/platform' ? 0.2 : 1);
           const ratio = Math.min(1, 960 / innerWidth, 600 / innerHeight);
           const width = Math.max(1, Math.round(innerWidth * ratio));
           const height = Math.max(1, Math.round(innerHeight * ratio));
