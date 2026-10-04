@@ -270,7 +270,7 @@ nav .is-current {
   transform: translateX(-50%);
   width: max-content;
   max-width: 90%;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border: 1px solid #687c8355;
   border-radius: 4px;
   background: #20333de8;
