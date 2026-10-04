@@ -1,6 +1,5 @@
-// World objects and the protagonist are added in their own implementation
-// tickets. Keep their future asset readiness inside this initialization boundary.
-export function mountWorld(container, state) {
+// Keep scene assets and GPU readiness within the world initialization boundary.
+export async function mountWorld(container, state) {
   const heading = document.createElement('div');
   heading.className = 'scene-heading';
   const eyebrow = document.createElement('p');
@@ -17,4 +16,8 @@ export function mountWorld(container, state) {
   combination.textContent = `${worldName} · ${layoutName}`;
   heading.append(eyebrow, title, combination);
   container.replaceChildren(heading);
+  if (state.world === 'island') {
+    const { mountIsland } = await import('./island.js');
+    await mountIsland(container, state.layout);
+  }
 }

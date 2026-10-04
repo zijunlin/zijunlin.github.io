@@ -15,13 +15,23 @@ function imageDifference(first, second) {
   return difference / (a.width * a.height * 3);
 }
 
+// Sample the reserved right reading band: screenshots of a transparent
+// background canvas also include foreground geometry, which is not this test.
+async function backgroundFrame(page) {
+  const { width, height } = page.viewportSize();
+  return page.screenshot({
+    clip: { x: width - 250, y: 120, width: 200, height: height - 160 },
+    animations: 'disabled',
+  });
+}
+
 test('the built homepage displays a moving decorative background', async ({ page }) => {
   await page.goto('/?seed=514018');
-  const canvas = page.locator('canvas');
+  const canvas = page.locator('#shader-canvas');
   await expect(canvas).toBeVisible();
-  const first = await canvas.screenshot();
+  const first = await backgroundFrame(page);
   await page.waitForTimeout(1500);
-  expect(imageDifference(first, await canvas.screenshot())).toBeGreaterThan(0.02);
+  expect(imageDifference(first, await backgroundFrame(page))).toBeGreaterThan(0.02);
   await expect(page.getByRole('navigation', { name: '主目录' })).toBeVisible();
   expect(await canvas.evaluate(element => getComputedStyle(element).pointerEvents)).toBe('none');
 });
@@ -47,12 +57,12 @@ for (const failure of ['unavailable', 'throws', 'compile', 'link']) {
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto('/');
-    await expect(page.locator('canvas')).toBeHidden();
+    await expect(page.locator('#shader-canvas')).toBeHidden();
     await expect(page.getByRole('navigation', { name: '主目录' })).toBeVisible();
     expect(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundImage)).toContain('radial-gradient');
-    const first = await page.screenshot({ animations: 'disabled' });
+    const first = await backgroundFrame(page);
     await page.waitForTimeout(300);
-    expect(imageDifference(first, await page.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+    expect(imageDifference(first, await backgroundFrame(page))).toBeLessThan(0.05);
     expect(errors).toEqual([]);
   });
 }
@@ -64,8 +74,8 @@ test('fixed entry seeds reproduce the visible field and different seeds vary it'
     await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
     await page.goto(`http://127.0.0.1:4173/?seed=${seed}`);
     await page.clock.runFor(100);
-    await expect(page.locator('canvas')).toBeVisible();
-    const result = await page.locator('canvas').screenshot({ animations: 'disabled' });
+    await expect(page.locator('#shader-canvas')).toBeVisible();
+    const result = await backgroundFrame(page);
     await page.close();
     return result;
   }
@@ -92,23 +102,23 @@ test('hidden pages pause and resume the existing background without another entr
   await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
   await page.goto('/?seed=514018');
   await page.clock.runFor(1000);
-  const canvas = page.locator('canvas');
+  const canvas = page.locator('#shader-canvas');
   await expect(canvas).toBeVisible();
   await expect(canvas).toHaveAttribute('data-motion', 'running');
-  const before = await canvas.screenshot({ animations: 'disabled' });
+  const before = await backgroundFrame(page);
   await page.evaluate(() => window.setPageHidden(true));
   await expect(canvas).toHaveAttribute('data-motion', 'paused');
   await page.clock.runFor(60000);
-  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+  expect(imageDifference(before, await backgroundFrame(page))).toBeLessThan(0.05);
   const heading = page.getByRole('heading', { name: '在构建中，保持好奇。' });
   const position = await heading.boundingBox();
   await page.evaluate(() => window.setPageHidden(false));
   await expect(canvas).toHaveAttribute('data-motion', 'running');
   await page.clock.runFor(50);
   expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
-  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+  expect(imageDifference(before, await backgroundFrame(page))).toBeLessThan(0.05);
   await page.clock.runFor(2000);
-  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeGreaterThan(0.02);
+  expect(imageDifference(before, await backgroundFrame(page))).toBeGreaterThan(0.02);
   expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
   await expect(page.getByRole('status')).toBeHidden();
 });
@@ -118,14 +128,14 @@ test('reload retains the entry variation even when the local clock changes', asy
   await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
   await page.goto('/');
   await page.clock.runFor(100);
-  const canvas = page.locator('canvas');
+  const canvas = page.locator('#shader-canvas');
   await expect(canvas).toBeVisible();
-  const original = await canvas.screenshot({ animations: 'disabled' });
+  const original = await backgroundFrame(page);
   await page.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
   await page.reload();
   await page.clock.runFor(100);
   await expect(canvas).toBeVisible();
-  expect(imageDifference(original, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+  expect(imageDifference(original, await backgroundFrame(page))).toBeLessThan(0.05);
 });
 
 test('a static fallback remains static through repeated visibility changes', async ({ page }) => {
@@ -139,8 +149,8 @@ test('a static fallback remains static through repeated visibility changes', asy
   for (const hidden of [true, false, true, false]) {
     await page.evaluate(value => window.setPageHidden(value), hidden);
   }
-  await expect(page.locator('canvas')).toBeHidden();
-  await expect(page.locator('canvas')).toHaveAttribute('data-motion', 'static');
+  await expect(page.locator('#shader-canvas')).toBeHidden();
+  await expect(page.locator('#shader-canvas')).toHaveAttribute('data-motion', 'static');
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
   expect(errors).toEqual([]);
 });

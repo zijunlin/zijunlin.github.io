@@ -111,5 +111,5 @@ test('background initialization failure does not block world initialization', as
   await page.goto('/');
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
   await expect(page.getByRole('status')).toBeHidden();
-  await expect(page.locator('canvas')).toBeHidden();
+  await expect(page.locator('#shader-canvas')).toBeHidden();
 });
