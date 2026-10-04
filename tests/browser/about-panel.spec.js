@@ -42,8 +42,9 @@ test('direct about links survive reload and home clears content state without re
   await expect(panel).toBeHidden();
   await expect(nav.getByRole('link', { name: '首页', exact: true })).toBeFocused();
   await expect(nav.getByRole('link', { name: '首页', exact: true })).toHaveAttribute('aria-current', 'page');
-  // Preview routing is a later ticket; Home must also clear its existing URL state.
+  // The modal preview must be closed before using the underlying navigation.
   await page.evaluate(() => { location.hash = '#work/platform'; });
+  await page.getByRole('dialog', { name: '智能语音平台', exact: true }).getByRole('button', { name: '关闭作品预览' }).click();
   await nav.getByRole('link', { name: '首页', exact: true }).click();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
   expect(new URL(page.url()).search).toBe('?world=system&seed=3');
