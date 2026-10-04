@@ -2,6 +2,7 @@ import { Scene, OrthographicCamera, WebGLRenderer, HemisphereLight, DirectionalL
 import { buildWorldGeometry } from './world-geometry.js';
 import { addEntrances } from './world-entrances.js';
 import { mountWorldParallax } from './world-parallax.js';
+import { mountProtagonist } from './world-protagonist.js';
 
 const presentations = {
   island: { name: '建筑地形小岛', shortName: '小岛世界', image: '层叠曲面小岛', description: '圆形居所、职业历程步道、中央工坊与下沉庭园。' },
@@ -22,10 +23,11 @@ export async function mountWorldView(container, state) {
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', presentation.image);
   canvas.setAttribute('aria-description', presentation.description);
-  let renderer, observer, disposeParallax;
+  let renderer, observer, disposeParallax, disposeProtagonist;
   const scene = new Scene();
   function fail() {
     disposeParallax?.();
+    disposeProtagonist?.();
     observer?.disconnect();
     renderer?.dispose();
     scene.traverse(object => { object.geometry?.dispose(); });
@@ -61,10 +63,7 @@ export async function mountWorldView(container, state) {
     await renderer.compileAsync(scene, camera);
     renderer.render(scene, camera);
     stage.append(canvas);
-    const characterSlot = document.createElement('div');
-    characterSlot.className = 'world-protagonist-slot';
-    characterSlot.setAttribute('aria-hidden', 'true');
-    stage.append(characterSlot);
+    disposeProtagonist = mountProtagonist(stage, layout);
     addEntrances(stage, placed, camera, () => {
       try { renderer.render(scene, camera); } catch { fail(); }
     });
