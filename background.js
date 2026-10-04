@@ -53,11 +53,17 @@ function entrySeed() {
 }
 
 function startBackground(canvas) {
+  const seed = entrySeed();
+  canvas.dataset.motion = 'static';
   let gl, program, buffer;
   const shaders = [];
   let frame = 0;
+  let removeLifecycleListeners = () => {};
   function fallback() {
     cancelAnimationFrame(frame);
+    frame = 0;
+    removeLifecycleListeners();
+    canvas.dataset.motion = 'static';
     canvas.hidden = true;
     if (gl) {
       if (buffer) gl.deleteBuffer(buffer);
@@ -91,35 +97,63 @@ function startBackground(canvas) {
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
     const resolution = gl.getUniformLocation(program, 'resolution');
     const time = gl.getUniformLocation(program, 'time');
-    gl.uniform1f(gl.getUniformLocation(program, 'seed'), mixSeed(entrySeed()));
+    gl.uniform1f(gl.getUniformLocation(program, 'seed'), mixSeed(seed));
     let elapsed = 0, last = performance.now();
+    let pageActive = true;
+    function canRun() {
+      return pageActive && !document.hidden;
+    }
     function draw(now) {
+      frame = 0;
+      if (!canRun()) return;
       try {
         const delta = now - last;
         if (delta >= 1000 / 30) {
           last = now;
-          if (!document.hidden) {
-            elapsed += Math.min(delta / 1000, 0.1) * 0.8;
-            const ratio = Math.min(1, 960 / innerWidth, 600 / innerHeight);
-            const width = Math.max(1, Math.round(innerWidth * ratio));
-            const height = Math.max(1, Math.round(innerHeight * ratio));
-            if (canvas.width !== width || canvas.height !== height) {
-              canvas.width = width;
-              canvas.height = height;
-            }
-            gl.viewport(0, 0, width, height);
-            gl.uniform2f(resolution, width, height);
-            gl.uniform1f(time, elapsed);
-            gl.drawArrays(gl.TRIANGLES, 0, 3);
-            if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) throw new Error('Rendering unavailable');
-            canvas.hidden = false;
+          elapsed += Math.min(delta / 1000, 0.1) * 0.8;
+          const ratio = Math.min(1, 960 / innerWidth, 600 / innerHeight);
+          const width = Math.max(1, Math.round(innerWidth * ratio));
+          const height = Math.max(1, Math.round(innerHeight * ratio));
+          if (canvas.width !== width || canvas.height !== height) {
+            canvas.width = width;
+            canvas.height = height;
           }
+          gl.viewport(0, 0, width, height);
+          gl.uniform2f(resolution, width, height);
+          gl.uniform1f(time, elapsed);
+          gl.drawArrays(gl.TRIANGLES, 0, 3);
+          if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) throw new Error('Rendering unavailable');
+          canvas.hidden = false;
         }
         frame = requestAnimationFrame(draw);
       } catch { fallback(); }
     }
+    function syncVisibility() {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      // Reset only the frame clock: preserve both the field and elapsed motion.
+      last = performance.now();
+      canvas.dataset.motion = canRun() ? 'running' : 'paused';
+      if (canRun()) frame = requestAnimationFrame(draw);
+    }
+    function leavePage() {
+      pageActive = false;
+      syncVisibility();
+    }
+    function returnToPage() {
+      pageActive = true;
+      syncVisibility();
+    }
+    document.addEventListener('visibilitychange', syncVisibility);
+    window.addEventListener('pagehide', leavePage);
+    window.addEventListener('pageshow', returnToPage);
+    removeLifecycleListeners = () => {
+      document.removeEventListener('visibilitychange', syncVisibility);
+      window.removeEventListener('pagehide', leavePage);
+      window.removeEventListener('pageshow', returnToPage);
+    };
     canvas.addEventListener('webglcontextlost', fallback, { once: true });
-    frame = requestAnimationFrame(draw);
+    syncVisibility();
   } catch { fallback(); }
   finally { for (const shader of shaders) gl.deleteShader(shader); }
 }

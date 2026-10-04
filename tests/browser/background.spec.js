@@ -73,3 +73,102 @@ test('fixed entry seeds reproduce the visible field and different seeds vary it'
   expect(imageDifference(first, await capture(514018))).toBeLessThan(0.05);
   expect(imageDifference(first, await capture(123456))).toBeGreaterThan(1);
 });
+
+async function controlVisibility(page) {
+  await page.addInitScript(() => {
+    let hidden = false;
+    Object.defineProperty(document, 'hidden', { get: () => hidden });
+    Object.defineProperty(document, 'visibilityState', { get: () => hidden ? 'hidden' : 'visible' });
+    window.setPageHidden = value => {
+      hidden = value;
+      document.dispatchEvent(new Event('visibilitychange'));
+    };
+  });
+}
+
+test('hidden pages pause and resume the existing background without another entrance', async ({ page }) => {
+  await controlVisibility(page);
+  await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
+  await page.goto('/?seed=514018');
+  await page.clock.runFor(1000);
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  await expect(canvas).toHaveAttribute('data-motion', 'running');
+  const before = await canvas.screenshot({ animations: 'disabled' });
+  await page.evaluate(() => window.setPageHidden(true));
+  await expect(canvas).toHaveAttribute('data-motion', 'paused');
+  await page.clock.runFor(60000);
+  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+  const heading = page.getByRole('heading', { name: '在构建中，保持好奇。' });
+  const position = await heading.boundingBox();
+  await page.evaluate(() => window.setPageHidden(false));
+  await expect(canvas).toHaveAttribute('data-motion', 'running');
+  await page.clock.runFor(50);
+  expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
+  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+  await page.clock.runFor(2000);
+  expect(imageDifference(before, await canvas.screenshot({ animations: 'disabled' }))).toBeGreaterThan(0.02);
+  expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
+  await expect(page.getByRole('status')).toBeHidden();
+});
+
+test('reload retains the entry variation even when the local clock changes', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
+  await page.goto('/');
+  await page.clock.runFor(100);
+  const canvas = page.locator('canvas');
+  await expect(canvas).toBeVisible();
+  const original = await canvas.screenshot({ animations: 'disabled' });
+  await page.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
+  await page.reload();
+  await page.clock.runFor(100);
+  await expect(canvas).toBeVisible();
+  expect(imageDifference(original, await canvas.screenshot({ animations: 'disabled' }))).toBeLessThan(0.05);
+});
+
+test('a static fallback remains static through repeated visibility changes', async ({ page }) => {
+  await controlVisibility(page);
+  await page.addInitScript(() => {
+    HTMLCanvasElement.prototype.getContext = () => null;
+  });
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
+  await page.goto('/');
+  for (const hidden of [true, false, true, false]) {
+    await page.evaluate(value => window.setPageHidden(value), hidden);
+  }
+  await expect(page.locator('canvas')).toBeHidden();
+  await expect(page.locator('canvas')).toHaveAttribute('data-motion', 'static');
+  await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('entry and visibility changes stay silent', async ({ page }) => {
+  await controlVisibility(page);
+  await page.addInitScript(() => {
+    window.audioStarts = 0;
+    for (const name of ['AudioContext', 'webkitAudioContext', 'Audio']) {
+      if (!window[name]) continue;
+      window[name] = new Proxy(window[name], {
+        construct(target, args) {
+          window.audioStarts++;
+          return Reflect.construct(target, args);
+        },
+      });
+    }
+  });
+  const mediaRequests = [];
+  page.on('request', request => {
+    if (request.resourceType() === 'media') mediaRequests.push(request.url());
+  });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
+  await page.evaluate(() => window.setPageHidden(true));
+  await page.evaluate(() => window.setPageHidden(false));
+  await page.waitForTimeout(500);
+  await expect(page.locator('audio, video')).toHaveCount(0);
+  expect(await page.evaluate(() => window.audioStarts)).toBe(0);
+  expect(mediaRequests).toEqual([]);
+});
