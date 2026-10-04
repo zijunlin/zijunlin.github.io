@@ -1,4 +1,19 @@
 import { test, expect } from '@playwright/test';
+import { PNG } from 'pngjs';
+
+// Compare average channel intensity, allowing rasterization noise rather than
+// requiring exact pixels or a golden screenshot of the artwork.
+function imageDifference(first, second) {
+  const a = PNG.sync.read(first), b = PNG.sync.read(second);
+  expect([a.width, a.height]).toEqual([b.width, b.height]);
+  let difference = 0;
+  for (let i = 0; i < a.data.length; i += 4) {
+    for (let channel = 0; channel < 3; channel++) {
+      difference += Math.abs(a.data[i + channel] - b.data[i + channel]);
+    }
+  }
+  return difference / (a.width * a.height * 3);
+}
 
 test('the built homepage displays a moving decorative background', async ({ page }) => {
   await page.goto('/?seed=514018');
@@ -6,7 +21,7 @@ test('the built homepage displays a moving decorative background', async ({ page
   await expect(canvas).toBeVisible();
   const first = await canvas.screenshot();
   await page.waitForTimeout(1500);
-  expect((await canvas.screenshot()).equals(first)).toBe(false);
+  expect(imageDifference(first, await canvas.screenshot())).toBeGreaterThan(0.02);
   await expect(page.getByRole('navigation', { name: '主目录' })).toBeVisible();
   expect(await canvas.evaluate(element => getComputedStyle(element).pointerEvents)).toBe('none');
 });
@@ -37,7 +52,7 @@ for (const failure of ['unavailable', 'throws', 'compile', 'link']) {
     expect(await page.locator('body').evaluate(element => getComputedStyle(element).backgroundImage)).toContain('radial-gradient');
     const first = await page.screenshot();
     await page.waitForTimeout(300);
-    expect((await page.screenshot()).equals(first)).toBe(true);
+    expect(imageDifference(first, await page.screenshot())).toBeLessThan(0.05);
     expect(errors).toEqual([]);
   });
 }
@@ -55,6 +70,6 @@ test('fixed entry seeds reproduce the visible field and different seeds vary it'
     return result;
   }
   const first = await capture(514018);
-  expect((await capture(514018)).equals(first)).toBe(true);
-  expect((await capture(123456)).equals(first)).toBe(false);
+  expect(imageDifference(first, await capture(514018))).toBeLessThan(0.05);
+  expect(imageDifference(first, await capture(123456))).toBeGreaterThan(1);
 });
