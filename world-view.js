@@ -6,11 +6,58 @@ const presentations = {
   system: { name: '抽象系统空间', shortName: '系统空间', image: '层叠曲面系统空间', description: '身份节点、环形时间总线、同轴核心模块与空闲实验区。' },
 };
 
-function addEntrances(stage, placed, camera) {
+const descriptions = {
+  about: '了解我的工程实践与关注方向。',
+  career: '沿着项目经历，看看一路的选择。',
+  work: '从智能语音平台，了解我的工程实践。',
+  notes: '这里留给思考与记录，目前暂无正文。',
+};
+
+// Project actual vertices once: the fixed camera and proportional stage keep
+// these screen-space targets aligned at every supported viewport size.
+function objectTarget(object, camera) {
+  const point = new Vector3();
+  let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+  object.updateMatrixWorld(true);
+  object.traverse(mesh => {
+    const positions = mesh.geometry?.attributes.position;
+    if (!positions) return;
+    for (let i = 0; i < positions.count; i++) {
+      point.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld).project(camera);
+      const x = (point.x + 1) * 320, y = (1 - point.y) * 220;
+      left = Math.min(left, x); right = Math.max(right, x);
+      top = Math.min(top, y); bottom = Math.max(bottom, y);
+    }
+  });
+  return { x: left - 8, y: top - 8, width: right - left + 16, height: bottom - top + 16 };
+}
+
+function addEntrances(stage, placed, camera, render) {
+  const entrances = [];
+  let hovered, focused;
+  function update() {
+    const active = hovered || focused;
+    for (const entrance of entrances) {
+      const selected = entrance.id === active;
+      entrance.link.classList.toggle('is-active', selected);
+      entrance.line.classList.toggle('is-active', selected);
+      entrance.description.hidden = !selected;
+      entrance.object.traverse(mesh => {
+        if (!mesh.material) return;
+        mesh.material.emissive.set('#d4ac70');
+        mesh.material.emissiveIntensity = selected ? 0.35 : 0;
+      });
+    }
+    render();
+  }
   const lines = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   lines.setAttribute('viewBox', '0 0 640 440');
   lines.setAttribute('aria-hidden', 'true');
   lines.classList.add('world-connectors');
+  const targets = document.createElementNS(lines.namespaceURI, 'svg');
+  targets.setAttribute('viewBox', '0 0 640 440');
+  targets.setAttribute('aria-hidden', 'true');
+  targets.classList.add('world-targets');
   for (const region of placed) {
     const point = new Vector3(region.x, 0, region.z).project(camera);
     const line = document.createElementNS(lines.namespaceURI, 'path');
@@ -22,9 +69,35 @@ function addEntrances(stage, placed, camera) {
     link.textContent = region.label;
     link.style.left = `${region.labelX / 640 * 100}%`;
     link.style.top = `${region.labelY / 440 * 100}%`;
-    stage.append(link);
+    const description = document.createElement('span');
+    description.className = 'world-description';
+    description.id = `world-description-${region.id}`;
+    description.textContent = descriptions[region.id];
+    description.hidden = true;
+    link.setAttribute('aria-describedby', description.id);
+    const target = document.createElementNS(lines.namespaceURI, 'a');
+    target.setAttribute('href', link.getAttribute('href'));
+    target.setAttribute('tabindex', '-1');
+    const hitArea = document.createElementNS(lines.namespaceURI, 'rect');
+    for (const [name, value] of Object.entries(objectTarget(region.object, camera))) {
+      hitArea.setAttribute(name, value);
+    }
+    hitArea.setAttribute('rx', '8');
+    target.append(hitArea);
+    targets.append(target);
+    entrances.push({ id: region.id, link, line, description, object: region.object });
+    for (const surface of [link, target]) {
+      surface.addEventListener('pointerenter', () => { hovered = region.id; update(); });
+      surface.addEventListener('pointerleave', () => { hovered = undefined; update(); });
+    }
+    // Keep the semantic label as the sole keyboard/screen-reader entrance.
+    target.addEventListener('click', () => link.focus({ preventScroll: true }));
+    link.addEventListener('focus', () => { hovered = undefined; focused = region.id; update(); });
+    link.addEventListener('blur', () => { focused = undefined; update(); });
+    stage.append(link, description);
   }
   stage.prepend(lines);
+  stage.append(targets);
   const featured = document.createElement('a');
   featured.className = 'world-featured';
   featured.href = '#work/platform';
@@ -84,8 +157,10 @@ export async function mountWorldView(container, state) {
     await renderer.compileAsync(scene, camera);
     renderer.render(scene, camera);
     stage.append(canvas);
-    addEntrances(stage, placed, camera);
-    // This world is static: render only for resize, not in a second animation loop.
+    addEntrances(stage, placed, camera, () => {
+      try { renderer.render(scene, camera); } catch { fail(); }
+    });
+    // Render on interaction and resize, without a second animation loop.
     observer = new ResizeObserver(() => {
       try {
         if (!stage.clientWidth) return;

@@ -1,4 +1,4 @@
-import { Mesh, MeshStandardMaterial, CylinderGeometry, TorusGeometry, TubeGeometry, CatmullRomCurve3, Vector3 } from 'three';
+import { Group, Mesh, MeshStandardMaterial, CylinderGeometry, TorusGeometry, TubeGeometry, CatmullRomCurve3, Vector3 } from 'three';
 
 // Approved C objects and A/B placement from the visual integration study.
 const regions = [
@@ -24,16 +24,18 @@ const layouts = {
 
 export function buildWorldGeometry(scene, { world, layout }) {
   const materials = new Map();
+  let parent = scene;
   function material(color) {
-    if (!materials.has(color)) materials.set(color, new MeshStandardMaterial({ color, roughness: world === 'system' ? 0.55 : 0.9, metalness: world === 'system' ? 0.12 : 0 }));
-    return materials.get(color);
+    const key = `${parent.uuid}:${color}`;
+    if (!materials.has(key)) materials.set(key, new MeshStandardMaterial({ color, roughness: world === 'system' ? 0.55 : 0.9, metalness: world === 'system' ? 0.12 : 0 }));
+    return materials.get(key);
   }
   function add(geometry, color, x, y, z) {
     const mesh = new Mesh(geometry, material(color));
     mesh.position.set(x, y, z);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    scene.add(mesh);
+    parent.add(mesh);
     return mesh;
   }
   function drum(x, z, bottom, radius, height, color) {
@@ -64,7 +66,12 @@ export function buildWorldGeometry(scene, { world, layout }) {
   add(new TubeGeometry(path, 96, world === 'island' ? 1.5 : 0.8, 8, layout === 'A'), world === 'island' ? '#82958c' : '#6c919e', 0, 0, 0);
 
   const objects = world === 'island' ? islandObjects : systemObjects;
-  for (const { id, x, z } of placed) objects[id](x, z, { drum, ring });
+  for (const region of placed) {
+    parent = new Group();
+    scene.add(parent);
+    region.object = parent;
+    objects[region.id](region.x, region.z, { drum, ring });
+  }
   return placed;
 }
 
