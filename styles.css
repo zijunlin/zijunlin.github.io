@@ -207,7 +207,7 @@ nav .is-current {
 }
 
 .world-connectors {
-  z-index: 0;
+  z-index: 2;
   fill: none;
   stroke: #6e8286;
   stroke-width: 0.8;

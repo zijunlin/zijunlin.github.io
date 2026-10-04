@@ -88,3 +88,27 @@ for (const form of ['island', 'system']) {
     });
   }
 }
+
+// Regression samples at visible edges inside overlapping padded rectangles.
+for (const [form, seed, points] of [
+  ['island', 0, [[270, 185, 'about', 0]]],
+  ['island', 4, [[209, 195, 'about', 0], [304, 218, 'career', 1]]],
+  ['system', 4, [[209, 195, 'about', 0], [304, 223, 'career', 1]]],
+]) {
+  test(`${form} seed ${seed} visible edges win over neighbouring forgiving margins`, async ({ page }) => {
+    await page.goto(`/?world=${form}&seed=${seed}`);
+    const world = page.getByRole('region', { name: /建筑地形小岛|抽象系统空间/ });
+    const image = world.getByRole('img');
+    await expect(image).toBeVisible();
+    await image.screenshot({ animations: 'disabled' });
+    const frame = await image.boundingBox();
+    for (const [sceneX, sceneY, destination, descriptionIndex] of points) {
+      const x = frame.x + sceneX / 640 * frame.width;
+      const y = frame.y + sceneY / 440 * frame.height;
+      await page.mouse.move(x, y);
+      await expect(world.getByText(descriptions[descriptionIndex][1], { exact: true })).toBeVisible();
+      await page.mouse.click(x, y);
+      await expect.poll(() => new URL(page.url()).hash).toBe(`#${destination}`);
+    }
+  });
+}
