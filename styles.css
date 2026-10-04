@@ -308,3 +308,87 @@ nav .is-current {
   z-index: 2;
   pointer-events: none;
 }
+
+nav a {
+  color: inherit;
+  text-decoration: none;
+}
+
+nav a:hover,
+nav a:focus-visible {
+  color: #f1f2ed;
+}
+
+.reading-panel {
+  position: fixed;
+  z-index: 5;
+  top: calc(var(--header-height) + 24px);
+  bottom: 24px;
+  right: max(20px, calc((100vw - 1180px) / 2));
+  width: var(--panel-width);
+  display: flex;
+  flex-direction: column;
+  background: rgba(27, 33, 37, 0.97);
+  backdrop-filter: blur(12px);
+  border: 1px solid #52616a;
+  border-radius: 10px;
+  box-shadow: 0 14px 40px #0004;
+  color: #cad3d5;
+}
+
+.reading-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #ffffff1a;
+}
+
+.reading-panel-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #eff1e9;
+}
+
+.reading-panel a {
+  color: #dfbf8b;
+  text-decoration: none;
+}
+
+.reading-panel a:hover {
+  text-decoration: underline;
+}
+
+.reading-panel :focus-visible {
+  outline: 1px solid #dfbf8b;
+  outline-offset: 4px;
+}
+
+.reading-panel-close {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.reading-panel-body {
+  min-height: 0;
+  padding: 0 20px 22px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.reading-panel-body h3 {
+  margin: 22px 0 8px;
+  font-size: 17px;
+  font-weight: 500;
+  color: #e2e7e1;
+}
+
+.about-role { color: #dfbf8b; }
+.reading-panel-body ul { padding-left: 20px; }
+.reading-panel-body li { margin-bottom: 10px; }
+.about-contacts { display: flex; flex-wrap: wrap; gap: 16px; }
