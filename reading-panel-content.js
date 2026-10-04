@@ -1,4 +1,17 @@
 export const readingPanels = {
+  work: { title: '作品', content: `
+    <p class="directory-intro">从实际项目中，观察架构与工程决策。</p>
+    <ul class="work-directory">
+      <li><details class="work-item">
+        <summary>
+          <span class="work-meta"><span class="work-featured">精选作品</span><time datetime="2019">2019</time></span>
+          <span class="work-title">智能语音平台</span>
+          <span class="work-tags"><span>架构设计</span><span>对话编排</span></span>
+          <span class="work-description">将流转驱动与对话内容分离，通过可组合的 Action 支持业务扩展。</span>
+        </summary>
+        <a class="work-preview-link" href="#work/platform">查看作品预览 ↗</a>
+      </details></li>
+    </ul>` },
   about: { title: "关于我", content: `
       <h3>林子钧</h3>
       <p class="about-role">曾任阿里巴巴 P7 技术专家</p>

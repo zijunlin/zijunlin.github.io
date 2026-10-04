@@ -4,6 +4,7 @@ import { readingPanels } from './reading-panel-content.js';
 export function mountReadingPanels(container) {
   const home = document.querySelector('nav a[href="#"]');
   const about = document.querySelector('nav a[href="#about"]');
+  const work = document.querySelector('nav a[href="#work"]');
   const panels = new Map();
   for (const [id, definition] of Object.entries(readingPanels)) {
     const panel = document.createElement('aside');
@@ -23,7 +24,7 @@ export function mountReadingPanels(container) {
     return [...panels.entries()].find(([, entry]) => entry.panel.contains(element));
   }
   function fallback(route) {
-    return route === '#about' ? about : document.querySelector(`.world-label[href="${route}"]`) || home;
+    return document.querySelector(`nav a[href="${route}"]`) || document.querySelector(`.world-label[href="${route}"]`) || home;
   }
   document.addEventListener('click', event => {
     const link = event.target.closest('a');
@@ -42,7 +43,7 @@ export function mountReadingPanels(container) {
     const next = panels.get(location.hash);
     const previous = active;
     for (const entry of panels.values()) entry.panel.hidden = entry !== next;
-    for (const [link, current] of [[home, !location.hash], [about, location.hash === '#about' || location.hash === '#career']]) {
+    for (const [link, current] of [[home, !location.hash], [about, location.hash === '#about' || location.hash === '#career'], [work, location.hash === '#work' || location.hash.startsWith('#work/')]]) {
       link.classList.toggle('is-current', current);
       if (current) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');

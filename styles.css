@@ -389,6 +389,23 @@ nav a:focus-visible {
 }
 
 .about-role { color: #dfbf8b; }
+.directory-intro { margin: 20px 0; color: #a6b7bd; }
+.reading-panel-body .work-directory { list-style: none; padding: 0; margin: 0; }
+.work-item { border-block: 1px solid #ffffff1a; padding: 14px 0; }
+.work-item summary { cursor: pointer; list-style: none; }
+.work-item summary::-webkit-details-marker { display: none; }
+.work-meta { display: flex; justify-content: space-between; color: #a6b7bd; font-size: 11px; }
+.work-featured { color: #dfbf8b; }
+.work-title { display: block; margin: 6px 0; color: #e2e7e1; font-size: 15px; }
+.work-title::after { content: ' ＋'; color: #a6b7bd; font-size: 12px; }
+.work-item[open] .work-title::after { content: ' −'; }
+.work-tags { display: flex; flex-wrap: wrap; gap: 6px; font-size: 11px; color: #a6b7bd; }
+.work-tags > span { padding: 0 6px; border: 1px solid #ffffff20; border-radius: 3px; }
+.work-description { display: none; margin-top: 12px; }
+.work-item:hover .work-description,
+.work-item:focus-within .work-description,
+.work-item[open] .work-description { display: block; }
+.work-preview-link { display: inline-block; margin-top: 10px; font-size: 12px; }
 .reading-panel-body ul { padding-left: 20px; }
 .reading-panel-body li { margin-bottom: 10px; }
 .about-contacts { display: flex; flex-wrap: wrap; gap: 16px; }
