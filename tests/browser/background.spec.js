@@ -65,7 +65,7 @@ test('fixed entry seeds reproduce the visible field and different seeds vary it'
     await page.goto(`http://127.0.0.1:4173/?seed=${seed}`);
     await page.clock.runFor(100);
     await expect(page.locator('canvas')).toBeVisible();
-    const result = await page.locator('canvas').screenshot();
+    const result = await page.locator('canvas').screenshot({ animations: 'disabled' });
     await page.close();
     return result;
   }
