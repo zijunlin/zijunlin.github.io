@@ -1,0 +1,52 @@
+import { test, expect } from '@playwright/test';
+
+test('notes entrances show an honest empty state with shared navigation', async ({ page }) => {
+  test.setTimeout(60000);
+  await page.goto('/?world=system&seed=3');
+  const world = page.getByRole('region', { name: '抽象系统空间 · 成长路径' });
+  const entrance = world.getByRole('link', { name: '随笔', exact: true });
+  await entrance.click();
+  const notes = page.getByRole('region', { name: '随笔', exact: true });
+  await expect(notes).toBeVisible();
+  await expect(page).toHaveURL(/#notes$/);
+  await expect(notes.getByRole('heading', { name: '还没有发布的随笔' })).toBeVisible();
+  await expect(notes.getByText('这里将记录技术思考、学习过程、创作体验与日常感悟。', { exact: true })).toBeVisible();
+  await expect(notes.getByRole('listitem')).toHaveCount(0);
+  await expect(notes.getByRole('article')).toHaveCount(0);
+  const nav = page.getByRole('navigation');
+  await expect(nav.getByRole('link', { name: '心得', exact: true })).toHaveAttribute('aria-current', 'page');
+  await page.goBack();
+  await expect(notes).toBeHidden();
+  await expect(entrance).toBeFocused();
+  await page.goForward();
+  await expect(notes).toBeVisible();
+  await notes.getByRole('link', { name: '关闭随笔' }).click();
+  await expect(entrance).toBeFocused();
+  await nav.getByRole('link', { name: '心得', exact: true }).click();
+  await expect(notes).toBeVisible();
+  const browse = notes.getByRole('link', { name: '浏览作品', exact: true });
+  await browse.click();
+  const work = page.getByRole('region', { name: '作品', exact: true });
+  await expect(work).toBeVisible();
+  await work.getByRole('link', { name: '关闭作品' }).click();
+  await expect(notes).toBeVisible();
+  await expect(browse).toBeFocused();
+  await nav.getByRole('link', { name: '首页', exact: true }).click();
+  await expect(notes).toBeHidden();
+  await expect(nav.getByRole('link', { name: '首页', exact: true })).toBeFocused();
+  expect(new URL(page.url()).search).toBe('?world=system&seed=3');
+});
+
+test('direct notes links reload and remain usable without world rendering', async ({ page }) => {
+  await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
+  await page.goto('/?world=island&seed=4#notes');
+  const panel = page.getByRole('region', { name: '随笔', exact: true });
+  await expect(panel).toBeVisible();
+  await page.reload();
+  await expect(panel.getByRole('heading', { name: '还没有发布的随笔' })).toBeVisible();
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('建筑地形小岛 · 成长路径');
+  await page.keyboard.press('Escape');
+  await expect(panel).toBeHidden();
+  await expect(page.getByRole('navigation').getByRole('link', { name: '心得', exact: true })).toBeFocused();
+  expect(new URL(page.url()).search).toBe('?world=island&seed=4');
+});

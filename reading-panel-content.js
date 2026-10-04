@@ -1,4 +1,9 @@
 export const readingPanels = {
+  notes: { title: '随笔', content: `
+    <h3>还没有发布的随笔</h3>
+    <p>这里将记录技术思考、学习过程、创作体验与日常感悟。</p>
+    <p>先从作品中了解我的工程实践。</p>
+    <p><a href="#work">浏览作品</a></p>` },
   work: { title: '作品', content: `
     <p class="directory-intro">从实际项目中，观察架构与工程决策。</p>
     <ul class="work-directory">
