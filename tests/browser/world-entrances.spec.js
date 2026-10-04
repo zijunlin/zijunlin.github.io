@@ -79,6 +79,7 @@ for (const form of ['island', 'system']) {
       await expect(page).toHaveURL(/#about$/);
       await world.getByRole('link', { name: '精选作品 · 智能语音平台' }).click();
       await expect(page).toHaveURL(/#work\/platform$/);
+      await page.getByRole('dialog', { name: '智能语音平台', exact: true }).getByRole('button', { name: '关闭作品预览' }).click();
       await page.setViewportSize({ width: 1024, height: 768 });
       await image.screenshot({ animations: 'disabled' });
       frame = await image.boundingBox();
