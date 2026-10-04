@@ -23,24 +23,11 @@ body {
   position: relative;
   min-height: 100svh;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 72% 26%, rgba(44, 61, 54, 0.42), transparent 34%),
-    radial-gradient(circle at 18% 80%, rgba(28, 39, 54, 0.28), transparent 38%),
-    #08090b;
+  background: radial-gradient(ellipse at 30% 25%, #263c4a, #162735 45%, #0c1723);
 }
 
-body::after {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  content: "";
-  pointer-events: none;
-  opacity: 0.18;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 64px 64px;
-  mask-image: linear-gradient(to bottom, black, transparent 88%);
+#shader-canvas[hidden] {
+  display: none;
 }
 
 #shader-canvas {

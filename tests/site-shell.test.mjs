@@ -6,7 +6,7 @@ import test from "node:test";
 const projectRoot = new URL("../", import.meta.url);
 const buildRoot = new URL("../dist/", import.meta.url);
 
-test("production artifact exposes the neutral shader-ready shell", async () => {
+test("production artifact exposes the shader-backed shell", async () => {
   execFileSync("npm", ["run", "build"], {
     cwd: projectRoot,
     stdio: "pipe"
@@ -30,7 +30,7 @@ test("production artifact exposes the neutral shader-ready shell", async () => {
     html,
     /<canvas\b(?=[^>]*\bid="shader-canvas")(?=[^>]*\baria-hidden="true")[^>]*><\/canvas>/
   );
-  assert.doesNotMatch(html, /<script\b/i);
+  assert.match(html, /<script\b[^>]*type="module"/i);
   assert.doesNotMatch(html, /fonts\.googleapis|fonts\.gstatic/i);
   assert.match(stylesheet, /radial-gradient/);
   assert.match(stylesheet, /pointer-events:none/);
