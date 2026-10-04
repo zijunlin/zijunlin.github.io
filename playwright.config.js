@@ -4,6 +4,8 @@ export default defineConfig({
   testDir: './tests/browser',
   // Timing and rendered-image checks share the software GPU on test machines.
   workers: 1,
+  // Scene readiness includes asynchronous GPU shader preparation.
+  expect: { timeout: 15000 },
   use: { baseURL: 'http://127.0.0.1:4173', viewport: { width: 1280, height: 800 } },
   projects: [{ name: 'chromium', use: { channel: 'chrome', launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } } }],
   webServer: {

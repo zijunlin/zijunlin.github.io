@@ -12,8 +12,18 @@ const regions = [
   { id: 'notes', label: '随笔' },
 ];
 const layouts = {
-  A: [[-100, -62, 160, 126], [-60, 100, 113, 341], [8, 5, 397, 249], [65, -100, 499, 208]],
-  B: [[-125, 20, 122, 164], [-50, 15, 202, 277], [30, -20, 465, 192], [112, -15, 484, 323]],
+  A: {
+    about: { x: -100, z: -62, labelX: 160, labelY: 126 },
+    career: { x: -60, z: 100, labelX: 113, labelY: 341 },
+    work: { x: 8, z: 5, labelX: 397, labelY: 249 },
+    notes: { x: 65, z: -100, labelX: 499, labelY: 208 },
+  },
+  B: {
+    about: { x: -125, z: 20, labelX: 122, labelY: 164 },
+    career: { x: -50, z: 15, labelX: 202, labelY: 277 },
+    work: { x: 30, z: -20, labelX: 465, labelY: 192 },
+    notes: { x: 112, z: -15, labelX: 484, labelY: 323 },
+  },
 };
 
 function buildIsland(scene, layout) {
@@ -41,10 +51,7 @@ function buildIsland(scene, layout) {
   drum(0, 0, -22, 137, 12, '#344a52');
   drum(0, 0, -10, 123, 10, '#4b6063');
 
-  const placed = regions.map((region, i) => {
-    const [x, z, lx, ly] = layouts[layout][i];
-    return { ...region, x, z, lx, ly };
-  });
+  const placed = regions.map(region => ({ ...region, ...layouts[layout][region.id] }));
   // A closes around the central workshop; B joins the four regions in order.
   const pathPoints = layout === 'A'
     ? [[-100, -62], [10, -105], [65, -100], [110, 20], [-60, 100], [-115, 35]]
@@ -88,14 +95,14 @@ function addEntrances(stage, placed, camera) {
   for (const region of placed) {
     const point = new Vector3(region.x, 0, region.z).project(camera);
     const line = document.createElementNS(lines.namespaceURI, 'path');
-    line.setAttribute('d', `M${(point.x + 1) * 320},${(1 - point.y) * 220} L${region.lx},${region.ly - 15}`);
+    line.setAttribute('d', `M${(point.x + 1) * 320},${(1 - point.y) * 220} L${region.labelX},${region.labelY - 15}`);
     lines.append(line);
     const link = document.createElement('a');
     link.className = 'island-label';
     link.href = `#${region.id}`;
     link.textContent = region.label;
-    link.style.left = `${region.lx / 640 * 100}%`;
-    link.style.top = `${region.ly / 440 * 100}%`;
+    link.style.left = `${region.labelX / 640 * 100}%`;
+    link.style.top = `${region.labelY / 440 * 100}%`;
     stage.append(link);
   }
   stage.prepend(lines);
