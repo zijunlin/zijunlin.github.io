@@ -1,4 +1,5 @@
 import { Raycaster, Vector2, Vector3 } from 'three';
+import { readingRoute } from './content-route.js';
 
 const descriptions = {
   about: '了解我的工程实践与关注方向。',
@@ -128,8 +129,8 @@ export function addEntrances(stage, placed, camera, render, onContextChange) {
   stage.append(featured);
   function syncRoute() {
     preview = location.hash === '#work/platform';
-    const route = location.hash.slice(1);
-    selected = preview ? selected || 'work' : entrances.find(entry => entry.id === route)?.id;
+    const route = readingRoute().slice(1);
+    selected = entrances.find(entry => entry.id === route)?.id;
     hovered = focused = undefined;
     update();
   }

@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
 
 test('world and navigation open the same compact work directory', async ({ page }) => {
+  // Directory interactions do not need continuous background frames.
+  await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
   await page.goto('/?world=system&seed=3');
+  await page.clock.runFor(1000);
   const world = page.getByRole('region', { name: '抽象系统空间 · 成长路径' });
   const entrance = world.getByRole('link', { name: '作品集', exact: true });
   await entrance.click();

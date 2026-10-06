@@ -10,12 +10,16 @@ function overlaps(a, b) {
   return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
-test('the guide responds consistently without covering entrances or panels in all four worlds', async ({ page }) => {
-  test.setTimeout(120000);
-  await page.setViewportSize({ width: 1024, height: 768 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const [form, seed] of [['island', 0], ['island', 4], ['system', 2], ['system', 3]]) {
+for (const [form, seed] of [['island', 0], ['island', 4], ['system', 2], ['system', 3]]) {
+  test(`the guide responds without covering entrances or panels in ${form}/${seed}`, async ({ page }) => {
+    test.setTimeout(120000);
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    // Geometry checks do not need continuous background frames on the software GPU.
+    await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
+    await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
     await page.goto(`/?world=${form}&seed=${seed}`);
+    await page.clock.runFor(1000);
     const world = page.getByRole('region', { name: /建筑地形小岛|抽象系统空间/ });
     const character = world.getByRole('group', { name: '主角精灵：随行创造者' });
     await expect(character).toBeVisible();
@@ -49,8 +53,8 @@ test('the guide responds consistently without covering entrances or panels in al
       await expect(annotation).toBeHidden();
       await expect.poll(async () => (await character.boundingBox()).x).toBeCloseTo(initial.x, 1);
     }
-  }
-});
+  });
+}
 
 test('navigation, direct links and preview return preserve the guide context', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });

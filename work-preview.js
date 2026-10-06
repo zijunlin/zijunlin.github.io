@@ -1,3 +1,5 @@
+import { readingRoute } from './content-route.js';
+
 // The preview is a separate popup layer; the world and reading panels stay mounted.
 export function mountWorkPreview() {
   const route = '#work/platform';
@@ -18,27 +20,42 @@ export function mountWorkPreview() {
     <ul class="preview-tags" aria-label="作品标签"><li>架构设计</li><li>对话编排</li><li>渐进迁移</li></ul>
     <div class="preview-actions"><button type="button" class="preview-return">返回浏览</button><a href="/platform.html" target="_blank" rel="noopener noreferrer">查看作品详情 ↗</a></div>`;
   document.body.append(dialog);
-  let source = location.hash === route ? '' : location.hash;
   let opener;
+  let source;
+  function replaceRoute(hash) {
+    const oldURL = location.href;
+    history.replaceState(null, '', `${location.pathname}${location.search}${hash}`);
+    window.dispatchEvent(new HashChangeEvent('hashchange', { oldURL, newURL: location.href }));
+  }
   document.addEventListener('click', event => {
     const link = event.target.closest('a[href="#work/platform"]');
     if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    source = location.hash === route ? source : location.hash;
+    event.preventDefault();
+    if (location.hash === route) return;
     opener = link;
+    const oldURL = location.href;
+    history.pushState({ workPreview: { source: location.hash } }, '', route);
+    window.dispatchEvent(new HashChangeEvent('hashchange', { oldURL, newURL: location.href }));
   });
-  function close() { location.hash = source; }
+  function close() {
+    if (location.hash !== route) return;
+    if (history.state?.workPreview) history.back();
+    else replaceRoute('');
+  }
   dialog.querySelector('.preview-close').addEventListener('click', close);
   dialog.querySelector('.preview-return').addEventListener('click', close);
   dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
   function sync() {
     if (location.hash === route) {
+      source = readingRoute();
       if (!dialog.open) dialog.showModal();
     } else {
       const wasOpen = dialog.open;
       dialog.close();
-      source = location.hash;
       if (wasOpen) {
-        const target = opener?.isConnected && !opener.closest('[hidden]') ? opener : document.querySelector('nav a[href="#work"]');
+        const sourcePanel = source ? document.getElementById(`${source.slice(1)}-panel-title`)?.closest('aside') : null;
+        const target = opener?.isConnected && !opener.closest('[hidden]') ? opener
+          : sourcePanel?.querySelector('a[href="#work/platform"]') || document.querySelector('nav a[href="#"]');
         target.focus({ preventScroll: true });
       }
     }

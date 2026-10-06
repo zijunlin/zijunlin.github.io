@@ -9,7 +9,12 @@ const descriptions = [
 ];
 
 test('world labels reveal short descriptions on hover and keyboard focus', async ({ page }) => {
+  test.setTimeout(60000);
+  // Entrance interactions do not need continuous background frames.
+  await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
   await page.goto('/?world=island&seed=0');
+  await page.clock.runFor(1000);
   const world = page.getByRole('region', { name: '建筑地形小岛 · 环绕核心' });
   for (const [name, description] of descriptions) {
     const link = world.getByRole('link', { name, exact: true });

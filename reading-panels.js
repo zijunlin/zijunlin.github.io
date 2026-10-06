@@ -1,4 +1,5 @@
 import { readingPanels } from './reading-panel-content.js';
+import { readingRoute } from './content-route.js';
 
 // Non-modal reading regions share routing but retain their own scroll and opener.
 export function mountReadingPanels(container) {
@@ -41,17 +42,19 @@ export function mountReadingPanels(container) {
     if (entry === active) entry.title.focus({ preventScroll: true });
   });
   function sync() {
-    // A popup overlays the existing reading context rather than replacing it.
-    if (location.hash === '#work/platform') return;
-    const next = panels.get(location.hash);
+    const route = readingRoute();
+    const preview = location.hash === '#work/platform';
+    const next = panels.get(route);
     const previous = active;
     for (const entry of panels.values()) entry.panel.hidden = entry !== next;
-    for (const [link, current] of [[home, !location.hash], [about, location.hash === '#about' || location.hash === '#career'], [work, location.hash === '#work' || location.hash.startsWith('#work/')], [notes, location.hash === '#notes']]) {
+    for (const [link, current] of [[home, !route], [about, route === '#about' || route === '#career'], [work, route === '#work'], [notes, route === '#notes']]) {
       link.classList.toggle('is-current', current);
       if (current) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     }
     active = next;
+    // Mount the source on reload/Forward without taking focus from the dialog.
+    if (preview) return;
     if (next && next !== previous) {
       if (previous?.opener && next.panel.contains(previous.opener)) {
         previous.opener.focus({ preventScroll: true });
