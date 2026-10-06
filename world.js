@@ -1,6 +1,7 @@
 import { worldState } from './world-state.js';
 import { mountReadingPanels } from './reading-panels.js';
 import { mountWorkPreview } from './work-preview.js';
+import { mountWorldFallback } from './world-fallback.js';
 
 // Completion is driven by scene loading and mounting, never by a minimum wait.
 const content = document.getElementById('content');
@@ -15,7 +16,9 @@ async function enterWorld() {
     scene.classList.add('entering');
   } catch {
     scene.replaceChildren();
-    document.getElementById('world-error').hidden = false;
+    const error = document.getElementById('world-error');
+    mountWorldFallback(error, '你仍可通过以下入口浏览全部内容，或稍后刷新重试。');
+    error.hidden = false;
   } finally {
     loading.hidden = true;
     content.setAttribute('aria-busy', 'false');

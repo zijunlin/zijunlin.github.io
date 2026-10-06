@@ -163,10 +163,28 @@ nav .is-current {
 
 #world-error {
   padding-top: 90px;
-  text-align: center;
+  text-align: left;
   color: #a5b8c0;
   font-size: 12px;
 }
+
+.world-fallback {
+  width: min(600px, calc(100% - var(--panel-width) - 48px));
+  margin-top: 32px;
+  padding: 24px;
+  border: 1px solid #71879455;
+  border-radius: 10px;
+  background: #15232bee;
+  color: #c8d2d8;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.world-fallback h2 { margin: 0 0 12px; color: #edf0ec; font-size: 20px; font-weight: 500; }
+.world-fallback p { margin: 0 0 20px; }
+.world-fallback ul { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; padding: 0; margin: 0 0 24px; list-style: none; }
+.world-fallback a { color: #dfbf8b; text-underline-offset: 5px; }
+.world-fallback a:focus-visible { outline: 2px solid #dfbf8b; outline-offset: 5px; }
+.fallback-featured { display: inline-block; border-top: 1px solid #71879455; padding-top: 16px; }
 
 .world-combination {
   color: #6f8998;
@@ -238,12 +256,6 @@ nav .is-current {
 .world-featured:focus-visible {
   outline: 1px solid #dab680;
   outline-offset: 2px;
-}
-
-.world-unavailable {
-  color: #a5b8c0;
-  font-size: 13px;
-  line-height: 1.8;
 }
 
 @media (max-width: 1050px) {
@@ -492,3 +504,7 @@ nav a:focus-visible {
 .preview-tags li { padding: 2px 8px; border: 1px solid #60727c; border-radius: 3px; }
 .preview-actions { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 24px; }
 .preview-actions a { background: #dfbf8b; border-color: #dfbf8b; color: #14212a; }
+
+@media (max-width: 700px) {
+  .world-fallback { width: 100%; }
+}

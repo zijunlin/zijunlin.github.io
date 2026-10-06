@@ -1,3 +1,5 @@
+import { mountWorldFallback } from './world-fallback.js';
+
 // Keep scene assets and GPU readiness within the world initialization boundary.
 export async function mountWorld(container, state) {
   const heading = document.createElement('div');
@@ -16,6 +18,19 @@ export async function mountWorld(container, state) {
   combination.textContent = `${worldName} · ${layoutName}`;
   heading.append(eyebrow, title, combination);
   container.replaceChildren(heading);
+  // Probe the required browser capabilities before importing geometry/renderer assets.
+  // Reuse this context in the renderer instead of allocating a second GPU context.
+  const canvas = document.createElement('canvas');
+  let context;
+  try {
+    if (typeof ResizeObserver === 'function') {
+      context = canvas.getContext('webgl2', { alpha: true, antialias: true });
+    }
+  } catch { /* Content remains available when context creation is rejected. */ }
+  if (!context || context.isContextLost()) {
+    mountWorldFallback(container);
+    return;
+  }
   const { mountWorldView } = await import('./world-view.js');
-  await mountWorldView(container, state);
+  await mountWorldView(container, state, { canvas, context });
 }

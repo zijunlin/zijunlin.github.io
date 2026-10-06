@@ -65,7 +65,7 @@ test('system capability failure preserves navigation and the chosen combination'
     };
   });
   await page.goto('/?world=system&seed=3');
-  await expect(page.getByText('当前浏览器暂时无法显示系统空间。请尝试支持 WebGL 2 的浏览器。')).toBeVisible();
+  await expect(page.getByText('当前浏览器暂时无法展示完整世界，你仍可浏览全部内容。')).toBeVisible();
   await expect(page.getByLabel('世界形态与空间布局')).toHaveText('抽象系统空间 · 成长路径');
   await expect(page.getByRole('navigation')).toBeVisible();
   await expect(page.getByRole('status')).toBeHidden();

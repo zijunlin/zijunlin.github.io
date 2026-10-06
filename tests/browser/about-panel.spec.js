@@ -99,7 +99,7 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
 test('about remains readable when world rendering is unavailable', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
   await page.goto('/?world=island&seed=0');
-  await expect(page.getByText('当前浏览器暂时无法显示小岛世界。请尝试支持 WebGL 2 的浏览器。')).toBeVisible();
+  await expect(page.getByText('当前浏览器暂时无法展示完整世界，你仍可浏览全部内容。')).toBeVisible();
   await page.getByRole('navigation').getByRole('link', { name: '关于', exact: true }).click();
   await expect(page.getByRole('region', { name: '关于我', exact: true }).getByRole('heading', { name: '林子钧' })).toBeVisible();
 });

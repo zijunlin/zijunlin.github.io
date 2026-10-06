@@ -3,13 +3,14 @@ import { buildWorldGeometry } from './world-geometry.js';
 import { addEntrances } from './world-entrances.js';
 import { mountWorldParallax } from './world-parallax.js';
 import { mountProtagonist } from './world-protagonist.js';
+import { mountWorldFallback } from './world-fallback.js';
 
 const presentations = {
-  island: { name: '建筑地形小岛', shortName: '小岛世界', image: '层叠曲面小岛', description: '圆形居所、职业历程步道、中央工坊与下沉庭园。' },
-  system: { name: '抽象系统空间', shortName: '系统空间', image: '层叠曲面系统空间', description: '身份节点、环形时间总线、同轴核心模块与空闲实验区。' },
+  island: { name: '建筑地形小岛', image: '层叠曲面小岛', description: '圆形居所、职业历程步道、中央工坊与下沉庭园。' },
+  system: { name: '抽象系统空间', image: '层叠曲面系统空间', description: '身份节点、环形时间总线、同轴核心模块与空闲实验区。' },
 };
 
-export async function mountWorldView(container, state) {
+export async function mountWorldView(container, state, { canvas, context }) {
   const { world, layout } = state;
   const presentation = presentations[world];
   const area = document.createElement('section');
@@ -19,13 +20,18 @@ export async function mountWorldView(container, state) {
   stage.className = 'world-stage';
   area.append(stage);
   container.append(area);
-  const canvas = document.createElement('canvas');
   canvas.setAttribute('role', 'img');
   canvas.setAttribute('aria-label', presentation.image);
   canvas.setAttribute('aria-description', presentation.description);
   let renderer, observer, disposeParallax, protagonist, disposeEntrances;
+  let failed = false;
   const scene = new Scene();
   function fail() {
+    if (failed) return;
+    failed = true;
+    canvas.removeEventListener('webglcontextlost', fail);
+    area.remove();
+    mountWorldFallback(container);
     disposeParallax?.();
     protagonist?.dispose();
     disposeEntrances?.();
@@ -35,15 +41,12 @@ export async function mountWorldView(container, state) {
     const materials = new Set();
     scene.traverse(object => { if (object.material) materials.add(object.material); });
     for (const material of materials) material.dispose();
-    const message = document.createElement('p');
-    message.className = 'world-unavailable';
-    message.textContent = `当前浏览器暂时无法显示${presentation.shortName}。请尝试支持 WebGL 2 的浏览器。`;
-    stage.replaceChildren(message);
   }
   try {
-    const context = canvas.getContext('webgl2', { alpha: true, antialias: true });
-    if (!context) { fail(); return; }
+    if (context.isContextLost()) { fail(); return; }
     renderer = new WebGLRenderer({ canvas, context, alpha: true, antialias: true });
+    renderer.debug.onShaderError = () => { throw new Error('World rendering unavailable'); };
+    canvas.addEventListener('webglcontextlost', fail, { once: true });
     renderer.setClearColor(0x000000, 0);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = PCFSoftShadowMap;
@@ -62,16 +65,19 @@ export async function mountWorldView(container, state) {
     const placed = buildWorldGeometry(scene, state);
     renderer.setSize(640, 440, false);
     await renderer.compileAsync(scene, camera);
+    if (failed || context.isContextLost()) { fail(); return; }
     renderer.render(scene, camera);
     stage.append(canvas);
     protagonist = mountProtagonist(stage, layout);
     disposeEntrances = addEntrances(stage, placed, camera, () => {
+      if (failed) return;
       try { renderer.render(scene, camera); } catch { fail(); }
     }, protagonist.respond);
+    if (failed) { disposeEntrances(); return; }
     // Render on interaction and resize, without a second animation loop.
     observer = new ResizeObserver(() => {
       try {
-        if (!stage.clientWidth) return;
+        if (failed || !stage.clientWidth) return;
         renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
         renderer.setSize(stage.clientWidth, stage.clientHeight, false);
         renderer.render(scene, camera);
@@ -79,6 +85,5 @@ export async function mountWorldView(container, state) {
     });
     observer.observe(stage);
     disposeParallax = mountWorldParallax(stage, document.getElementById('shader-canvas'));
-    canvas.addEventListener('webglcontextlost', fail, { once: true });
   } catch { fail(); }
 }

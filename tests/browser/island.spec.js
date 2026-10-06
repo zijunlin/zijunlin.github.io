@@ -37,7 +37,7 @@ test('world capability failure keeps the chosen state and navigation readable', 
     };
   });
   await page.goto('/?world=island&seed=0');
-  await expect(page.getByText('当前浏览器暂时无法显示小岛世界。请尝试支持 WebGL 2 的浏览器。')).toBeVisible();
+  await expect(page.getByText('当前浏览器暂时无法展示完整世界，你仍可浏览全部内容。')).toBeVisible();
   await expect(page.getByLabel('世界形态与空间布局')).toHaveText('建筑地形小岛 · 环绕核心');
   await expect(page.getByRole('navigation')).toBeVisible();
   await expect(page.getByRole('status')).toBeHidden();
