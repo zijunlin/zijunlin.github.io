@@ -4,6 +4,12 @@ export default defineConfig({
   base: "/",
   build: {
     outDir: "dist",
-    emptyOutDir: true
+    emptyOutDir: true,
+    rolldownOptions: {
+      input: {
+        main: "index.html",
+        platform: "platform.html"
+      }
+    }
   }
 });
