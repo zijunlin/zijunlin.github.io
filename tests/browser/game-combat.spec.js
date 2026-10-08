@@ -17,6 +17,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
 });
 test('movement, pause, results and replay preserve the site and reset the run', async ({ page }) => {
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   const before = await page.locator('.game-ship').boundingBox();
   await page.keyboard.down('ArrowLeft'); await page.clock.runFor(500); await page.keyboard.up('ArrowLeft');
   const after = await page.locator('.game-ship').boundingBox();

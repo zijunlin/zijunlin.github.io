@@ -20,7 +20,9 @@ export function mountOpening(layer, captures, reduced) {
   ship.setAttribute('viewBox', '-24 -30 48 72');
   ship.innerHTML = '<path fill="#a7e9ed" d="M0-26 19 19 7 13 0 19-7 13-19 19Z"/><path fill="#163a49" d="M0-13 6 9 0 5-6 9Z"/><path fill="#e5ffff" d="M-2-6H2V3H-2Z"/><path fill="#8de9f080" d="M-5 18 0 34 5 18Z"/>';
   layer.append(ship);
+  let appearanceTime = -1;
   function render(time, orbitTime, bounds, center) {
+    const appearanceChanged = time !== appearanceTime;
     const down = ease((time - 1.8) / 1.2);
     const cx = (bounds.left + bounds.right) / 2;
     const cy = Math.max(bounds.top + 62, (bounds.bottom + 20) * .44);
@@ -38,10 +40,11 @@ export function mountOpening(layer, captures, reduced) {
       const y = reduced ? blend(capture.y, (center?.y ?? bounds.bottom - 45) + Math.sin(i * Math.PI / 2) * 30, ease(time / 3))
         : blend(capture.y, shipY + Math.sin(angle) * radius, gather);
       element.style.transform = `translate(${x - capture.size / 2}px, ${y - capture.size / 2}px) scale(${blend(1, .65, ease(time / 1.7))})`;
-      envelope.setAttribute('transform', `translate(100 100) scale(${blend(1, .45, ease(time / 1.7))}) translate(-100 -100)`);
+      if (appearanceChanged) envelope.setAttribute('transform', `translate(100 100) scale(${blend(1, .45, ease(time / 1.7))}) translate(-100 -100)`);
     });
     ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px)`;
-    ship.style.opacity = String(ease((time - 1.25) / .55));
+    if (appearanceChanged) ship.style.opacity = String(ease((time - 1.25) / .55));
+    appearanceTime = time;
   }
   return { render };
 }

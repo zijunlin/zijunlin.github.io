@@ -20,15 +20,17 @@ export function startGame({ scene, world, leave, text }) {
   document.body.append(panel);
   const controller = new AbortController(), { signal } = controller;
   const keys = new Set();
-  let phase = 'opening', time = 0, previous = 0, frame = 0, paused = false, disposed = false, dialog, battle;
+  let phase = 'opening', time = 0, previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
   function bounds() {
-    return { left: 24, right: innerWidth - 24, top: Math.max(160, hud.getBoundingClientRect().bottom + 20), bottom: innerHeight - 20 };
+    return arena ??= { left: 24, right: innerWidth - 24, top: Math.max(160, hud.getBoundingClientRect().bottom + 20), bottom: innerHeight - 20 };
   }
   function labels() {
+    arena = null;
     status.textContent = phase === 'opening' ? text('正在集结', 'Assembling') : phase === 'battle' ? text('星际生存', 'Space survival') : text('本局结束', 'Run complete');
     instructions.textContent = text('WASD / 方向键移动 · P 暂停 · Esc 结束', 'WASD / Arrows to move · P to pause · Esc to end');
     updateScore();
     back.textContent = phase === 'opening' ? text('返回首页', 'Return home') : text('结束本局', 'End run');
+    battle?.resize(bounds());
   }
   function updateScore() {
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
@@ -54,6 +56,8 @@ export function startGame({ scene, world, leave, text }) {
     phase = 'battle'; time = 3; keys.clear(); paused = false; previous = 0;
     battle = createBattle({ bounds: bounds(), reducedMotion: reduced });
     labels();
+    opening.render(3, 0, bounds(), battle.state.ship);
+    view.draw(battle.state, bounds());
   }
   function finish() {
     if (phase === 'opening') { leave(); return; }
@@ -104,10 +108,11 @@ export function startGame({ scene, world, leave, text }) {
     ]);
   }
   window.addEventListener('blur', pause, { signal });
-  window.addEventListener('resize', pause, { signal });
+  window.addEventListener('resize', () => { arena = null; pause(); }, { signal });
   document.addEventListener('visibilitychange', () => { if (document.hidden) pause(); }, { signal });
   const movement = new Set(['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright']);
   window.addEventListener('keydown', event => {
+    if (event.metaKey || event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
     if (key === 'p') { event.preventDefault(); if (!event.repeat) pause(); }
     if (movement.has(key) && phase === 'battle' && !paused) { event.preventDefault(); keys.add(key); }
