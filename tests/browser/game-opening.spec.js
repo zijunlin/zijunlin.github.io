@@ -15,9 +15,10 @@ test('opening retains the world and navigation, then restores original entrances
   await enter(page);
   const original = await page.locator('.celestial-gate').first().elementHandle();
   await page.clock.runFor(3100);
-  await expect(page.getByText('飞船已就位')).toBeVisible();
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-satellite')).toHaveCount(4);
   await page.screenshot({ path: '.scratch/home-space-game-build/opening-ready.png' });
+  await page.getByRole('button', { name: '结束本局', exact: true }).click();
   await page.getByRole('button', { name: '返回首页', exact: true }).click();
   expect(await original.evaluate(node => node.isConnected)).toBe(true);
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
@@ -33,8 +34,9 @@ test('resize pauses opening and only a manual resume advances it', async ({ page
   await page.clock.runFor(5000);
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
   await page.clock.runFor(2600);
-  await expect(page.getByText('飞船已就位')).toBeVisible();
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '返回首页', exact: true }).click();
   await expect(page.locator('.space-game')).toHaveCount(0);
 });
 test('top navigation exits an active opening without stealing content focus', async ({ page }) => {
@@ -58,14 +60,15 @@ test('hidden opening stays paused until confirmation', async ({ page }) => {
   await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
   await page.clock.runFor(3100);
-  await expect(page.getByText('飞船已就位')).toBeVisible();
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
 });
 test('reduced motion still reaches the same playable formation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await enter(page);
   await page.clock.runFor(3100);
-  await expect(page.getByText('飞船已就位')).toBeVisible();
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await page.screenshot({ path: '.scratch/home-space-game-build/opening-reduced.png' });
   await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: '返回首页', exact: true }).click();
   await expect(page.locator('.celestial-gate').first()).toBeVisible();
 });
