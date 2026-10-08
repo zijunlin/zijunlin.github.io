@@ -16,7 +16,7 @@ test('invites once after eligible dwell and loads only after acceptance', async 
   await expect(page.getByRole('dialog', { name: '来一场星际冒险？' })).toBeVisible();
   expect(requests.filter(url => /space-game.*\.(js|css)/.test(url))).toEqual([]);
   await page.getByRole('button', { name: '开始游戏', exact: true }).click();
-  await expect(page.getByText('游戏已就绪')).toBeVisible();
+  await expect(page.getByText('正在集结')).toBeVisible();
   await page.getByRole('button', { name: '返回首页', exact: true }).click();
   await page.clock.runFor(11000);
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -73,7 +73,7 @@ test('a failed load can be retried or dismissed without losing the site', async 
   await expect(page.getByText('加载失败，请重试')).toBeVisible();
   fail = false;
   await page.getByRole('button', { name: '重试', exact: true }).click();
-  await expect(page.getByText('游戏已就绪')).toBeVisible();
+  await expect(page.getByText('正在集结')).toBeVisible();
   await expect(page.locator('.space-game')).toHaveCSS('position', 'fixed');
 });
 
