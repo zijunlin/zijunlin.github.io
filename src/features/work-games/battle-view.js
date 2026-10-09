@@ -29,9 +29,18 @@ export function mountBattleView(layer) {
       context.strokeStyle = '#9be8ff'; context.lineWidth = 3;
       context.beginPath(); context.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2); context.stroke();
     }
-    context.fillStyle = '#c9f5fa';
     for (const bullet of state.bullets) {
-      context.beginPath(); context.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2); context.fill();
+      if (bullet.piercing) {
+        // A violet elongated bolt distinguishes piercing without flashing.
+        context.strokeStyle = '#d2a7ff'; context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(bullet.x - bullet.vx / 520 * 7, bullet.y - bullet.vy / 520 * 7);
+        context.lineTo(bullet.x + bullet.vx / 520 * 3, bullet.y + bullet.vy / 520 * 3);
+        context.stroke();
+      } else {
+        context.fillStyle = '#c9f5fa';
+        context.beginPath(); context.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2); context.fill();
+      }
     }
     for (const obstacle of state.obstacles) {
       if (obstacle.warning > 0) {

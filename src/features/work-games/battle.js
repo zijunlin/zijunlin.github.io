@@ -1,4 +1,4 @@
-import { difficultyAt, hitObstacle, intersectsSweep } from './rules.js';
+import { difficultyAt, hitObstacle, intersectsSweep, sweepContact } from './rules.js';
 const types = [
   { radius: 12, hp: 1, points: 10, speed: 1.45 },
   { radius: 21, hp: 3, points: 30, speed: 1 },
@@ -31,15 +31,15 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     generated++;
     state.obstacles.push({ ...type, resource: generated % 4 === 0 ? (generated % 12 === 0 ? 'shockwave' : 'weapon') : null, x, y, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity, warning: .65, flash: 0 });
   }
-  function shot(x, y, angle) {
-    state.bullets.push({ x, y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: 1.9 });
+  function shot(x, y, angle, piercing = false) {
+    state.bullets.push({ x, y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: 1.9, piercing, hitTargets: new Set() });
   }
   function fireForward() {
     const { x, y } = state.ship;
     if (state.weaponLevel === 0) {
       shot(x - 5, y - 12, -Math.PI / 2); shot(x + 5, y - 12, -Math.PI / 2);
     } else {
-      for (const offset of [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset);
+      for (const offset of [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset, state.weaponLevel >= 3);
     }
   }
   function fireSatellites() {
@@ -92,14 +92,20 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       const before = { x: bullet.x, y: bullet.y };
       const liveFor = Math.min(dt, bullet.life);
       bullet.x += bullet.vx * liveFor; bullet.y += bullet.vy * liveFor; bullet.life -= dt;
+      if (liveFor <= 0) continue;
+      const contacts = [];
+      const fraction = liveFor / dt;
       for (const obstacle of state.obstacles) {
-        if (liveFor <= 0) continue;
-        const fraction = liveFor / dt;
+        if (obstacle.warning > 0 || obstacle.hp <= 0 || bullet.hitTargets.has(obstacle)) continue;
         const obstacleEnd = { x: obstacle.before.x + (obstacle.x - obstacle.before.x) * fraction, y: obstacle.before.y + (obstacle.y - obstacle.before.y) * fraction };
-        if (!intersectsSweep(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + 2)) continue;
+        const time = sweepContact(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + 2);
+        if (time !== null) contacts.push({ obstacle, time });
+      }
+      contacts.sort((a, b) => a.time - b.time);
+      for (const { obstacle } of contacts) {
         if (!settleHit(obstacle, 1)) continue;
-        bullet.life = 0;
-        break;
+        bullet.hitTargets.add(obstacle);
+        if (bullet.hitTargets.size >= (bullet.piercing ? 2 : 1)) { bullet.life = 0; break; }
       }
     }
     for (const wave of state.shockwaves) {
@@ -129,7 +135,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
           if (distance - travel <= RESOURCE.pickup) {
             resource.life = 0;
             if (resource.kind === 'shockwave') state.shockwaveCharges = Math.min(3, state.shockwaveCharges + 1);
-            else state.weaponLevel = Math.min(2, state.weaponLevel + 1);
+            else state.weaponLevel = Math.min(3, state.weaponLevel + 1);
             state.pickupKind = resource.kind;
             state.pickupFeedback = RESOURCE.feedback;
           }
