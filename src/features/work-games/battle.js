@@ -13,7 +13,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, shockwaveCharges: 1, shockwaves: [] };
+  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
@@ -29,7 +29,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random() - .5) * .9;
     const velocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.speed;
     generated++;
-    state.obstacles.push({ ...type, resource: generated % 4 === 0 ? 'weapon' : null, x, y, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity, warning: .65, flash: 0 });
+    state.obstacles.push({ ...type, resource: generated % 4 === 0 ? (generated % 12 === 0 ? 'shockwave' : 'weapon') : null, x, y, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity, warning: .65, flash: 0 });
   }
   function fire() {
     const { x, y } = state.ship;
@@ -120,7 +120,9 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
           if (distance) { resource.x += dx / distance * travel; resource.y += dy / distance * travel; }
           if (distance - travel <= RESOURCE.pickup) {
             resource.life = 0;
-            state.weaponLevel = Math.min(1, state.weaponLevel + 1);
+            if (resource.kind === 'shockwave') state.shockwaveCharges = Math.min(3, state.shockwaveCharges + 1);
+            else state.weaponLevel = Math.min(1, state.weaponLevel + 1);
+            state.pickupKind = resource.kind;
             state.pickupFeedback = RESOURCE.feedback;
           }
         }

@@ -35,10 +35,10 @@ export function startGame({ scene, world, leave, text }) {
     battle?.resize(bounds());
   }
   function updateScore() {
-    shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${text('空格释放', 'Space to release')}`;
+    shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${text('空格释放 · 橙色圆环补充', 'Space to release · Orange rings refill')}`;
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
-    const weaponValue = `${text('武器等级', 'Weapon level')}: ${battle?.state.weaponLevel ?? 0}${battle?.state.pickupFeedback > 0 ? text(' · 已拾取武器资源', ' · Weapon resource collected') : ''}`;
+    const weaponValue = `${text('武器等级', 'Weapon level')}: ${battle?.state.weaponLevel ?? 0}${battle?.state.pickupFeedback > 0 && battle?.state.pickupKind === 'weapon' ? text(' · 已拾取武器资源', ' · Weapon resource collected') : ''}`;
     if (weapon.textContent !== weaponValue) weapon.textContent = weaponValue;
   }
   const language = new MutationObserver(labels);
