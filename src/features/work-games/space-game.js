@@ -10,8 +10,9 @@ export function startGame({ scene, world, leave, text }) {
   const status = document.createElement('p'); status.setAttribute('role', 'status');
   const instructions = document.createElement('p'), score = document.createElement('p');
   score.className = 'game-score';
+  const weapon = document.createElement('p'); weapon.className = 'game-weapon'; weapon.setAttribute('role', 'status');
   const back = document.createElement('button'); back.type = 'button';
-  hud.append(status, instructions, score, back); panel.append(hud);
+  hud.append(status, instructions, score, weapon, back); panel.append(hud);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gamePerformance = mountGamePerformance({ layer: panel, scene, world, reduced });
   const view = mountBattleView(panel);
@@ -34,6 +35,8 @@ export function startGame({ scene, world, leave, text }) {
   function updateScore() {
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
+    const weaponValue = `${text('武器等级', 'Weapon level')}: ${battle?.state.weaponLevel ?? 0}${battle?.state.pickupFeedback > 0 ? text(' · 已拾取武器资源', ' · Weapon resource collected') : ''}`;
+    if (weapon.textContent !== weaponValue) weapon.textContent = weaponValue;
   }
   const language = new MutationObserver(labels);
   language.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });

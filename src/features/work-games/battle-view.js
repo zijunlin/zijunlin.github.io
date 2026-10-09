@@ -9,6 +9,12 @@ export function mountBattleView(layer) {
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   resize();
+  function weaponMarker(x, y, size) {
+    context.strokeStyle = '#78f4c4'; context.fillStyle = '#123d32'; context.lineWidth = 2;
+    context.beginPath(); context.moveTo(x, y - size); context.lineTo(x + size, y);
+    context.lineTo(x, y + size); context.lineTo(x - size, y); context.closePath(); context.fill(); context.stroke();
+    context.beginPath(); context.moveTo(x - 3, y + 2); context.lineTo(x, y - 3); context.lineTo(x + 3, y + 2); context.stroke();
+  }
   function draw(state, bounds) {
     if (!context) return;
     context.clearRect(0, 0, innerWidth, innerHeight);
@@ -23,6 +29,7 @@ export function mountBattleView(layer) {
         const y = Math.max(bounds.top + 10, Math.min(bounds.bottom - 10, obstacle.y));
         context.strokeStyle = '#f4c880'; context.lineWidth = 2;
         context.beginPath(); context.arc(x, y, 7 + (1 - obstacle.warning / .65) * 8, 0, Math.PI * 2); context.stroke();
+        if (obstacle.resource) weaponMarker(x, y, 6);
         continue;
       }
       context.fillStyle = obstacle.flash ? '#fff5d7' : '#765d59aa';
@@ -35,7 +42,9 @@ export function mountBattleView(layer) {
         if (i) context.lineTo(x, y); else context.moveTo(x, y);
       }
       context.closePath(); context.fill(); context.stroke();
+      if (obstacle.resource) weaponMarker(obstacle.x, obstacle.y, 7);
     }
+    for (const resource of state.resources) weaponMarker(resource.x, resource.y, 10);
     for (const particle of state.particles) {
       context.fillStyle = `rgba(255,211,155,${particle.life / .45})`;
       context.fillRect(particle.x - 1, particle.y - 1, 2, 2);
