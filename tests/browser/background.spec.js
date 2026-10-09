@@ -83,6 +83,8 @@ async function controlVisibility(page) {
 }
 
 test('hidden pages pause and resume the existing background without another entrance', async ({ page }) => {
+  // Multiple rendered screenshots need extra time on the software GPU.
+  test.setTimeout(90000);
   await controlVisibility(page);
   await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
@@ -102,9 +104,13 @@ test('hidden pages pause and resume the existing background without another entr
   await expect(canvas).toHaveAttribute('data-motion', 'running');
   await page.clock.runFor(50);
   expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
-  expect(imageDifference(before, await backgroundFrame(page))).toBeLessThan(0.05);
+  const resumedStep = imageDifference(before, await backgroundFrame(page));
   await page.clock.runFor(2000);
-  expect(imageDifference(before, await backgroundFrame(page))).toBeGreaterThan(0.02);
+  const continuedMotion = imageDifference(before, await backgroundFrame(page));
+  expect(continuedMotion).toBeGreaterThan(0.02);
+  // A short resumed frame must not jump ahead by the minute spent hidden.
+  // Compare it with normal visible motion rather than the old, near-static art.
+  expect(resumedStep).toBeLessThan(continuedMotion * 0.2 + 0.05);
   expect((await heading.boundingBox()).y).toBeCloseTo(position.y, 1);
   await expect(page.getByRole('status')).toBeHidden();
 });

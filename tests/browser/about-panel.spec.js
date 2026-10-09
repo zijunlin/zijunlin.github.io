@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 
 test.describe.configure({ timeout: 60000 });
 
 test('navigation and world entrance open the same about panel and browser back returns to the world', async ({ page }) => {
-  await page.goto('/?world=island&seed=0');
+  await page.goto('/?seed=0');
   const nav = page.getByRole('navigation', { name: '主目录' });
   const panel = page.getByRole('region', { name: '关于我', exact: true });
   await nav.getByRole('link', { name: '关于', exact: true }).click();
@@ -14,7 +15,7 @@ test('navigation and world entrance open the same about panel and browser back r
   await expect(panel.getByRole('link', { name: '邮箱' })).toHaveAttribute('href', 'mailto:linzijun.programmer@gmail.com');
   await page.goBack();
   await expect(panel).toBeHidden();
-  const world = page.getByRole('region', { name: '建筑地形小岛 · 环绕核心' });
+  const world = page.getByRole('region', { name: '星辰圆点 · 环绕核心' });
   await world.getByRole('link', { name: '关于我', exact: true }).click();
   await expect(panel).toBeVisible();
   await expect(page.getByRole('region', { name: '关于我', exact: true })).toHaveCount(1);
@@ -24,7 +25,7 @@ test('navigation and world entrance open the same about panel and browser back r
 });
 
 test('direct about links survive reload and home clears content state without replacing the world', async ({ page }) => {
-  await page.goto('/?world=system&seed=3#about');
+  await page.goto('/?seed=3#about');
   const panel = page.getByRole('region', { name: '关于我', exact: true });
   const nav = page.getByRole('navigation');
   await expect(panel).toBeVisible();
@@ -32,7 +33,7 @@ test('direct about links survive reload and home clears content state without re
   await expect(nav.getByRole('link', { name: '关于', exact: true })).toHaveAttribute('aria-current', 'page');
   await page.reload();
   await expect(panel).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('抽象系统空间 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(nav.getByRole('link', { name: '关于', exact: true })).toBeFocused();
@@ -47,12 +48,12 @@ test('direct about links survive reload and home clears content state without re
   await page.getByRole('dialog', { name: '智能语音平台', exact: true }).getByRole('button', { name: '关闭作品预览' }).click();
   await nav.getByRole('link', { name: '首页', exact: true }).click();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
-  expect(new URL(page.url()).search).toBe('?world=system&seed=3');
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('抽象系统空间 · 成长路径');
+  expect(new URL(page.url()).search).toBe('?seed=3');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
 });
 
 for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
-  test(`about stays in the reading band with internal scrolling at ${viewport.width}×${viewport.height}`, async ({ page }) => {
+  test(`about remains within the viewport with internal scrolling at ${viewport.width}×${viewport.height}`, async ({ page }) => {
     test.setTimeout(120000);
     await page.setViewportSize(viewport);
     await page.addInitScript(() => {
@@ -61,10 +62,10 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
         return type === 'webgl' ? null : original.call(this, type, ...args);
       };
     });
-    for (const [form, seed] of [['island', 0], ['island', 4], ['system', 2], ['system', 3]]) {
-      await page.goto(`/?world=${form}&seed=${seed}`);
-      const world = page.getByRole('region', { name: /建筑地形小岛|抽象系统空间/ });
-      const image = world.getByRole('img');
+    for (const seed of [0, 4]) {
+      await page.goto(`/?seed=${seed}`);
+      const world = page.getByRole('region', { name: /星辰圆点/ });
+      const image = world.locator('.celestial-stage');
       await expect(image).toBeVisible();
       await image.screenshot({ animations: 'disabled' });
       const before = await image.boundingBox();
@@ -73,19 +74,12 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
       const panel = page.getByRole('region', { name: '关于我', exact: true });
       await expect(panel).toBeVisible();
       const box = await panel.boundingBox();
-      expect(box.x).toBeGreaterThanOrEqual(before.x + before.width + 27.9);
       expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       expect(box.y).toBeGreaterThanOrEqual(76);
       expect(box.y + box.height).toBeLessThanOrEqual(viewport.height);
       await page.mouse.move(viewport.width - 1, viewport.height - 1);
       const after = await image.boundingBox();
       for (const axis of ['x', 'y', 'width', 'height']) expect(after[axis]).toBeCloseTo(before[axis], 2);
-      for (const link of await world.getByRole('link').all()) {
-        const entrance = await link.boundingBox();
-        expect(entrance.x + entrance.width).toBeLessThan(box.x);
-      }
-      const character = await page.locator('.world-protagonist-slot').boundingBox();
-      expect(character.x + character.width).toBeLessThan(box.x);
       const contact = panel.getByRole('link', { name: 'LinkedIn' });
       await contact.scrollIntoViewIfNeeded();
       await expect(contact).toBeInViewport();
@@ -98,8 +92,8 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
 
 test('about remains readable when world rendering is unavailable', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-  await page.goto('/?world=island&seed=0');
-  await expect(page.getByText('当前浏览器暂时无法展示完整世界，你仍可浏览全部内容。')).toBeVisible();
+  await page.goto('/?seed=0');
+  await expect(page.locator('.celestial-stage')).toBeVisible();
   await page.getByRole('navigation').getByRole('link', { name: '关于', exact: true }).click();
   await expect(page.getByRole('region', { name: '关于我', exact: true }).getByRole('heading', { name: '林子钧' })).toBeVisible();
 });

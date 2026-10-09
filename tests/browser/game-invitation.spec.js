@@ -121,3 +121,52 @@ test('navigation invalidates a preparing game and preserves content focus', asyn
   await expect(page.locator('.space-game, [data-game-dialog]')).toHaveCount(0);
   await expect(page.locator('#about-panel-title')).toBeFocused();
 });
+
+test('Shift+G invites immediately and can reopen after declining or leaving a game', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => requests.push(request.url()));
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.keyboard.press('Shift+G');
+  await expect(page.getByRole('dialog', { name: '来一场星际冒险？' })).toBeVisible();
+  await expect(page.getByText('在首页按 Shift + G，可再次打开游戏邀请。')).toBeVisible();
+  expect(requests.filter(url => /space-game.*\.(js|css)/.test(url))).toEqual([]);
+  await page.getByRole('button', { name: '暂时不了' }).click();
+  await page.clock.runFor(11000);
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await page.keyboard.press('Shift+G');
+  await page.getByRole('button', { name: '开始游戏', exact: true }).click();
+  await expect(page.getByText('正在集结')).toBeVisible();
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await expect(page.locator('.space-game')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await page.clock.runFor(500);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(1);
+});
+
+test('game shortcut ignores typing, other modifiers, reading and small windows', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.keyboard.press('g');
+  await page.keyboard.press('Control+Shift+G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await page.evaluate(() => {
+    const input = document.createElement('input'); input.id = 'shortcut-input';
+    document.body.append(input); input.focus();
+  });
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('#shortcut-input')).toHaveValue('G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await page.locator('nav a[href="#about"]').click();
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await page.locator('nav a[href="#"]').click();
+  await page.setViewportSize({ width: 700, height: 500 });
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+});
