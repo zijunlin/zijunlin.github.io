@@ -9,8 +9,8 @@ export function intersectsSweep(a0, a1, b0, b1, radius) {
 export function difficultyAt(seconds) {
   return { level: Math.min(5, Math.floor(seconds / 9)), interval: Math.max(.28, 1 - seconds * .016) };
 }
-export function hitObstacle(obstacle) {
+export function hitObstacle(obstacle, damage = 1) {
   if (obstacle.hp <= 0) return 0;
-  obstacle.hp--;
+  obstacle.hp = Math.max(0, obstacle.hp - damage);
   return obstacle.hp === 0 ? obstacle.points : 0;
 }

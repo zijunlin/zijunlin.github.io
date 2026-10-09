@@ -65,3 +65,74 @@ test('a ship impact ends the battle and further time cannot change its result', 
   battle.advance(10);
   assert.equal(JSON.stringify(battle.state), result);
 });
+
+
+test('a damaging attack can defeat a target in one hit without awarding it twice', () => {
+  const obstacle = { hp: 3, points: 30 };
+  assert.equal(hitObstacle(obstacle, 3), 30);
+  assert.equal(hitObstacle(obstacle, 3), 0);
+  assert.equal(obstacle.hp, 0);
+});
+
+
+async function topApproach(type = 0) {
+  const { createBattle } = await import('../../src/features/work-games/battle.js');
+  const sequence = [type, .6, .5, .5, 0];
+  let index = 0;
+  return createBattle({
+    bounds: { left: 0, right: 800, top: 0, bottom: 300 },
+    random: () => sequence[index++ % sequence.length],
+  });
+}
+
+test('the default volley fires two forward shots and four satellites every .16 seconds', async () => {
+  const battle = await topApproach();
+  battle.advance(1 / 120);
+  assert.equal(battle.state.bullets.length, 6);
+  assert.equal(battle.state.bullets.filter(shot => shot.vy === -520).length, 2);
+  battle.resize({ left: -1000, right: 2000, top: -1000, bottom: 2000 });
+  battle.advance(18 / 120);
+  assert.equal(battle.state.bullets.length, 6);
+  battle.advance(1 / 120);
+  assert.equal(battle.state.bullets.length, 12);
+});
+
+test('warning targets resist actual shots and a simultaneous forward pair awards one kill', async () => {
+  const battle = await topApproach();
+  battle.advance(1.6);
+  assert.equal(battle.state.score, 0);
+  assert.equal(battle.state.obstacles[0].hp, 1);
+  battle.advance(15 / 120);
+  const pair = battle.state.bullets.filter(shot => Math.abs(shot.x - 400) === 5 && shot.y < 10);
+  assert.equal(pair.length, 2);
+  battle.advance(1 / 120);
+  assert.equal(battle.state.score, 10);
+  assert.equal(battle.state.obstacles.length, 0);
+  // Both paths cross the target; only the killing shot is consumed.
+  assert.equal(battle.state.bullets.filter(shot => Math.abs(shot.x - 400) === 5 && shot.y < 10).length, 1);
+  battle.advance(.1);
+  assert.equal(battle.state.score, 10);
+});
+
+test('a shot that destroys an obstacle takes priority over ship impact in that step', async () => {
+  const battle = await topApproach();
+  battle.advance(207 / 120);
+  // A viewport resize puts the ship in the approaching obstacle's collision path.
+  battle.resize({ left: 0, right: 800, top: -100, bottom: 40 });
+  battle.advance(1 / 120);
+  assert.equal(battle.state.score, 10);
+  assert.equal(battle.state.ended, false);
+});
+
+
+test('real forward hits each deal one damage and award nothing before destruction', async () => {
+  const battle = await topApproach(.5);
+  battle.advance(197 / 120);
+  assert.equal(battle.state.obstacles[0].hp, 3);
+  battle.advance(1 / 120);
+  assert.equal(battle.state.obstacles[0].hp, 1);
+  assert.equal(battle.state.score, 0);
+  battle.advance(11 / 120);
+  assert.equal(battle.state.obstacles.length, 0);
+  assert.equal(battle.state.score, 30);
+});

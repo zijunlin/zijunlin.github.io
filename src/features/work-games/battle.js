@@ -35,6 +35,20 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       shot(x + Math.cos(angle) * 30, y + Math.sin(angle) * 30, angle);
     }
   }
+  // All attacks settle here, so a destroyed target cannot award another kill.
+  function settleHit(obstacle, damage) {
+    if (obstacle.warning > 0 || obstacle.hp <= 0) return false;
+    obstacle.flash = .12;
+    const points = hitObstacle(obstacle, damage);
+    state.score += points;
+    if (obstacle.hp === 0) {
+      for (let i = 0; i < 8; i++) {
+        const angle = i * Math.PI / 4;
+        state.particles.push({ x: obstacle.x, y: obstacle.y, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80, life: .45 });
+      }
+    }
+    return true;
+  }
   function step(dt, input) {
     state.seconds += dt;
     const shipBefore = { ...state.ship };
@@ -56,19 +70,16 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       const liveFor = Math.min(dt, bullet.life);
       bullet.x += bullet.vx * liveFor; bullet.y += bullet.vy * liveFor; bullet.life -= dt;
       for (const obstacle of state.obstacles) {
-        if (obstacle.warning > 0 || obstacle.hp <= 0 || liveFor <= 0) continue;
+        if (liveFor <= 0) continue;
         const fraction = liveFor / dt;
         const obstacleEnd = { x: obstacle.before.x + (obstacle.x - obstacle.before.x) * fraction, y: obstacle.before.y + (obstacle.y - obstacle.before.y) * fraction };
         if (!intersectsSweep(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + 2)) continue;
-        bullet.life = 0; obstacle.flash = .12;
-        const points = hitObstacle(obstacle); state.score += points;
-        if (points) for (let i = 0; i < 8; i++) {
-          const angle = i * Math.PI / 4;
-          state.particles.push({ x: obstacle.x, y: obstacle.y, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80, life: .45 });
-        }
+        if (!settleHit(obstacle, 1)) continue;
+        bullet.life = 0;
         break;
       }
     }
+    // Resolve attacks first: a kill in this step protects the ship from that target.
     for (const obstacle of state.obstacles) {
       if (obstacle.hp > 0 && obstacle.warning <= 0 && intersectsSweep(shipBefore, state.ship, obstacle.before, obstacle, obstacle.radius + 4)) state.ended = true;
     }
