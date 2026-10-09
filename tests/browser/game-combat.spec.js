@@ -62,3 +62,29 @@ test('switching language preserves a nonzero combat score', async ({ page }) => 
   expect(translated).toBeGreaterThanOrEqual(score);
   await page.screenshot({ path: '.scratch/home-space-game-build/combat.png' });
 });
+
+test('Space releases once, pause discards input, and replay restores the reserve', async ({ page }) => {
+  await expect(page.locator('.game-shockwave')).toHaveText('冲击波: 1 / 3 · 空格释放');
+  await page.keyboard.press('p');
+  await page.keyboard.down('Space');
+  await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+  await page.clock.runFor(100);
+  await page.keyboard.down('Space');
+  await page.clock.runFor(100);
+  await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+  await page.keyboard.up('Space');
+  await page.keyboard.down('Space');
+  await page.clock.runFor(100);
+  await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
+  await page.keyboard.down('Space');
+  await page.clock.runFor(600);
+  await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
+  await page.keyboard.up('Space');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.locator('.game-shockwave')).toHaveText('Shockwave: 0 / 3 · Space to release');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Play again', exact: true }).click();
+  await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+  await page.keyboard.press('Space'); await page.clock.runFor(100);
+  await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
+});

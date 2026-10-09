@@ -8,12 +8,13 @@ const types = [
 const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2 };
 const FAN_ANGLE = Math.PI / 30;
 const STEP = 1 / 120;
+const SHOCKWAVE = { radius: 220, duration: .5, damage: 3 };
 const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0 };
-  let paused = false, remainder = 0, shotWait = 0, spawnWait = 1, generated = 0;
+  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, shockwaveCharges: 1, shockwaves: [] };
+  let paused = false, remainder = 0, shotWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
     const type = types[Math.floor(random() * 3)];
@@ -60,6 +61,11 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
   }
   function step(dt, input) {
     state.seconds += dt;
+    if (shockwavePending && state.shockwaveCharges > 0) {
+      state.shockwaveCharges--;
+      state.shockwaves.push({ ...state.ship, radius: 0, age: 0, hitTargets: new Set() });
+    }
+    shockwavePending = false;
     const shipBefore = { ...state.ship };
     const magnitude = Math.max(1, Math.hypot(input.x, input.y));
     state.ship.x = constrain(state.ship.x + input.x / magnitude * 300 * dt, bounds.left + 38, bounds.right - 38);
@@ -88,6 +94,15 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
         break;
       }
     }
+    for (const wave of state.shockwaves) {
+      wave.age += dt;
+      wave.radius = SHOCKWAVE.radius * Math.min(1, wave.age / SHOCKWAVE.duration);
+      for (const obstacle of state.obstacles) {
+        if (wave.hitTargets.has(obstacle) || Math.hypot(obstacle.x - wave.x, obstacle.y - wave.y) > wave.radius + obstacle.radius) continue;
+        if (settleHit(obstacle, SHOCKWAVE.damage)) wave.hitTargets.add(obstacle);
+      }
+    }
+    state.shockwaves = state.shockwaves.filter(wave => wave.age < SHOCKWAVE.duration);
     // Resolve attacks first: a kill in this step protects the ship from that target.
     for (const obstacle of state.obstacles) {
       if (obstacle.hp > 0 && obstacle.warning <= 0 && intersectsSweep(shipBefore, state.ship, obstacle.before, obstacle, obstacle.radius + 4)) state.ended = true;
@@ -121,11 +136,13 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
   return {
     state,
     advance(seconds, input = { x: 0, y: 0 }) {
-      if (paused || state.ended) return;
+      if (paused || state.ended) { shockwaveHeld = Boolean(input.shockwave); return; }
+      if (input.shockwave && !shockwaveHeld) shockwavePending = true;
+      shockwaveHeld = Boolean(input.shockwave);
       remainder += seconds;
       while (remainder + 1e-10 >= STEP && !state.ended) { step(STEP, input); remainder -= STEP; }
     },
-    setPaused(value) { paused = value; },
+    setPaused(value) { paused = value; if (value) shockwavePending = false; },
     resize(next) {
       bounds = next;
       state.ship.x = constrain(state.ship.x, bounds.left + 38, bounds.right - 38);

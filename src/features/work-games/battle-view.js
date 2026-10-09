@@ -19,6 +19,10 @@ export function mountBattleView(layer) {
     if (!context) return;
     context.clearRect(0, 0, innerWidth, innerHeight);
     context.save(); context.beginPath(); context.rect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top); context.clip();
+    for (const wave of state.shockwaves) {
+      context.strokeStyle = '#9be8ff'; context.lineWidth = 3;
+      context.beginPath(); context.arc(wave.x, wave.y, wave.radius, 0, Math.PI * 2); context.stroke();
+    }
     context.fillStyle = '#c9f5fa';
     for (const bullet of state.bullets) {
       context.beginPath(); context.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2); context.fill();
