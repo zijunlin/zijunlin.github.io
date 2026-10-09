@@ -16,6 +16,8 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));
   await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.bringToFront();
   await page.clock.runFor(10100);
   await expect(page.getByRole('button', { name: '开始游戏', exact: true })).toBeVisible();
   await page.getByRole('button', { name: '开始游戏', exact: true }).click();

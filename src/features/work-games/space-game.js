@@ -20,7 +20,7 @@ export function startGame({ scene, world, leave, text }) {
   document.body.append(panel);
   const controller = new AbortController(), { signal } = controller;
   const keys = new Set();
-  let spaceHeld = false, shockwavePending = false;
+  let shockwavePending = false;
   let phase = 'opening', previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
   function bounds() {
     return arena ??= { left: 24, right: innerWidth - 24, top: Math.max(160, hud.getBoundingClientRect().bottom + 20), bottom: innerHeight - 20 };
@@ -115,6 +115,8 @@ export function startGame({ scene, world, leave, text }) {
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
     closeDialog(); paused = false; previous = 0; keys.clear(); shockwavePending = false;
+    // The page sends pulses; release the previous pulse before accepting fresh input.
+    battle?.advance(0);
     battle?.resize(bounds()); battle?.setPaused(false); view.resize();
     (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   }
@@ -134,15 +136,14 @@ export function startGame({ scene, world, leave, text }) {
   window.addEventListener('keydown', event => {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
-    if (event.code === 'Space') {
+    if (event.code === 'Space' && phase === 'battle' && !paused && !event.target.closest('button, a[href], input, textarea, select, [contenteditable]:not([contenteditable="false"])')) {
       event.preventDefault();
-      if (!spaceHeld && !event.repeat && phase === 'battle' && !paused) shockwavePending = true;
-      spaceHeld = true;
+      if (!event.repeat) shockwavePending = true;
     }
     if (key === 'p') { event.preventDefault(); if (!event.repeat) pause(); }
     if (movement.has(key) && phase === 'battle' && !paused) { event.preventDefault(); keys.add(key); }
   }, { signal });
-  window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); if (event.code === 'Space') spaceHeld = false; }, { signal });
+  window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); }, { signal });
   labels(); gamePerformance.advance(0, bounds()); (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   return {
     escape() { if (phase === 'results') returnHome(); else finish(); },
