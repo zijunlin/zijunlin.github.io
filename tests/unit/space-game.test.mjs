@@ -136,3 +136,76 @@ test('real forward hits each deal one damage and award nothing before destructio
   assert.equal(battle.state.obstacles.length, 0);
   assert.equal(battle.state.score, 30);
 });
+
+test('shockwave consumes one charge, keeps its release center and freezes with battle time', async () => {
+  const battle = await topApproach();
+  assert.equal(battle.state.shockwaveCharges, 1);
+  const origin = { ...battle.state.ship };
+  battle.advance(1 / 120, { x: 1, y: 0, shockwave: true });
+  assert.equal(battle.state.shockwaveCharges, 0);
+  assert.equal(battle.state.shockwaves.length, 1);
+  assert.equal(battle.state.shockwaves[0].x, origin.x);
+  battle.setPaused(true);
+  const frozen = JSON.stringify(battle.state);
+  battle.advance(1, { x: 0, y: 0, shockwave: true });
+  assert.equal(JSON.stringify(battle.state), frozen);
+  battle.setPaused(false);
+  battle.advance(.6, { x: 1, y: 0, shockwave: true });
+  assert.equal(battle.state.shockwaves.length, 0);
+  assert.equal(battle.state.shockwaveCharges, 0);
+});
+
+test('an expanding shockwave deals three damage only once and leaves distant targets intact', async () => {
+  const { createBattle } = await import('../../src/features/work-games/battle.js');
+  const make = () => { const values = [.9, 0, .5, .5, 0]; let i = 0;
+    return createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: () => values[i++ % 5], reducedMotion: true }); };
+  const near = make(); near.advance(1.66);
+  assert.equal(near.state.obstacles[0].hp, 5);
+  near.resize({ left: 0, right: 180, top: 0, bottom: 300 });
+  near.advance(.49, { x: 0, y: 0, shockwave: true });
+  assert.equal(near.state.obstacles[0].hp, 2);
+  near.advance(.1);
+  assert.equal(near.state.obstacles[0].hp, 2);
+  const far = make(); far.advance(1.66);
+  far.advance(.6, { x: 0, y: 0, shockwave: true });
+  assert.equal(far.state.obstacles[0].hp, 5);
+});
+
+test('shockwaves respect warnings and use the normal kill score without duplicate settlement', async () => {
+  const { createBattle } = await import('../../src/features/work-games/battle.js');
+  const make = () => { const values = [.5, 0, .5, .5, 0]; let i = 0;
+    return createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: () => values[i++ % 5], reducedMotion: true }); };
+  const warning = make(); warning.advance(1.05);
+  warning.resize({ left: 0, right: 180, top: 0, bottom: 300 });
+  warning.advance(.5, { x: 0, y: 0, shockwave: true });
+  assert.equal(warning.state.obstacles[0].hp, 3);
+  assert.equal(warning.state.score, 0);
+  const live = make(); live.advance(1.66);
+  live.resize({ left: 0, right: 180, top: 0, bottom: 300 });
+  live.advance(.6, { x: 0, y: 0, shockwave: true });
+  assert.equal(live.state.score, 30);
+  live.advance(.1);
+  assert.equal(live.state.score, 30);
+});
+
+test('paused Space is consumed, and a fresh battle restores its initial reserve', async () => {
+  const battle = await topApproach();
+  battle.setPaused(true);
+  battle.advance(.1, { x: 0, y: 0, shockwave: true });
+  battle.setPaused(false);
+  battle.advance(.1, { x: 0, y: 0, shockwave: true });
+  assert.equal(battle.state.shockwaveCharges, 1);
+  battle.advance(.01);
+  battle.advance(.01, { x: 0, y: 0, shockwave: true });
+  assert.equal(battle.state.shockwaveCharges, 0);
+  const replay = await topApproach();
+  assert.equal(replay.state.shockwaveCharges, 1);
+  assert.deepEqual(replay.state.shockwaves, []);
+});
+
+test('a Space edge between simulation steps is retained until the next step', async () => {
+  const battle = await topApproach();
+  battle.advance(.001, { x: 0, y: 0, shockwave: true });
+  battle.advance(.008);
+  assert.equal(battle.state.shockwaveCharges, 0);
+});

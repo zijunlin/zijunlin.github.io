@@ -10,14 +10,16 @@ export function startGame({ scene, world, leave, text }) {
   const status = document.createElement('p'); status.setAttribute('role', 'status');
   const instructions = document.createElement('p'), score = document.createElement('p');
   score.className = 'game-score';
+  const shockwave = document.createElement('p'); shockwave.className = 'game-shockwave';
   const back = document.createElement('button'); back.type = 'button';
-  hud.append(status, instructions, score, back); panel.append(hud);
+  hud.append(status, instructions, score, shockwave, back); panel.append(hud);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gamePerformance = mountGamePerformance({ layer: panel, scene, world, reduced });
   const view = mountBattleView(panel);
   document.body.append(panel);
   const controller = new AbortController(), { signal } = controller;
   const keys = new Set();
+  let spaceHeld = false, shockwavePending = false;
   let phase = 'opening', previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
   function bounds() {
     return arena ??= { left: 24, right: innerWidth - 24, top: Math.max(160, hud.getBoundingClientRect().bottom + 20), bottom: innerHeight - 20 };
@@ -32,6 +34,7 @@ export function startGame({ scene, world, leave, text }) {
     battle?.resize(bounds());
   }
   function updateScore() {
+    shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${text('空格释放', 'Space to release')}`;
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
   }
@@ -52,7 +55,7 @@ export function startGame({ scene, world, leave, text }) {
     panel.append(dialog); dialog.showModal();
   }
   function beginBattle() {
-    phase = 'battle'; keys.clear(); paused = false; previous = 0;
+    phase = 'battle'; keys.clear(); shockwavePending = false; paused = false; previous = 0;
     battle = createBattle({ bounds: bounds(), reducedMotion: reduced });
     labels();
     gamePerformance.advance(0, bounds(), battle.state);
@@ -62,7 +65,7 @@ export function startGame({ scene, world, leave, text }) {
     if (phase === 'returning' || disposed) return;
     gamePerformance.returnHome();
     phase = 'returning'; paused = false; previous = 0;
-    keys.clear(); battle?.setPaused(true); closeDialog();
+    keys.clear(); shockwavePending = false; battle?.setPaused(true); closeDialog();
     hud.hidden = true; panel.querySelector('.game-effects').hidden = true;
     panel.focus({ preventScroll: true });
     cancelAnimationFrame(frame); frame = requestAnimationFrame(draw);
@@ -71,7 +74,7 @@ export function startGame({ scene, world, leave, text }) {
     if (phase === 'returning') return;
     if (phase === 'opening') { returnHome(); return; }
     if (phase === 'results') return;
-    phase = 'results'; paused = true; battle.setPaused(true); keys.clear(); cancelAnimationFrame(frame); previous = 0;
+    phase = 'results'; paused = true; battle.setPaused(true); keys.clear(); shockwavePending = false; cancelAnimationFrame(frame); previous = 0;
     labels();
     modal(text('本局结束', 'Run complete'), score.textContent, [
       [text('再来一局', 'Play again'), () => {
@@ -95,9 +98,11 @@ export function startGame({ scene, world, leave, text }) {
       if (gamePerformance.advance(dt, bounds()) === 'ready') beginBattle();
     } else if (phase === 'battle') {
       battle.advance(dt, {
+        shockwave: shockwavePending,
         x: Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')),
         y: Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')),
       });
+      if (dt > 0) shockwavePending = false;
       updateScore(); view.draw(battle.state, bounds());
       if (battle.state.ended) { finish(); return; }
     }
@@ -106,12 +111,12 @@ export function startGame({ scene, world, leave, text }) {
   }
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
-    closeDialog(); paused = false; previous = 0; keys.clear();
+    closeDialog(); paused = false; previous = 0; keys.clear(); shockwavePending = false;
     battle?.resize(bounds()); battle?.setPaused(false); view.resize();
     (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   }
   function pause() {
-    keys.clear();
+    keys.clear(); shockwavePending = false;
     if (paused || disposed || phase === 'results' || phase === 'returning') return;
     paused = true; battle?.setPaused(true); cancelAnimationFrame(frame); previous = 0;
     modal(text('游戏已暂停', 'Game paused'), text('回到至少 800 × 600 的窗口后，手动继续。', 'Return to a window of at least 800 × 600, then resume.'), [
@@ -126,15 +131,20 @@ export function startGame({ scene, world, leave, text }) {
   window.addEventListener('keydown', event => {
     if (event.metaKey || event.ctrlKey || event.altKey) return;
     const key = event.key.toLowerCase();
+    if (event.code === 'Space') {
+      event.preventDefault();
+      if (!spaceHeld && !event.repeat && phase === 'battle' && !paused) shockwavePending = true;
+      spaceHeld = true;
+    }
     if (key === 'p') { event.preventDefault(); if (!event.repeat) pause(); }
     if (movement.has(key) && phase === 'battle' && !paused) { event.preventDefault(); keys.add(key); }
   }, { signal });
-  window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); }, { signal });
+  window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); if (event.code === 'Space') spaceHeld = false; }, { signal });
   labels(); gamePerformance.advance(0, bounds()); (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   return {
     escape() { if (phase === 'results') returnHome(); else finish(); },
     dispose() {
-      disposed = true; cancelAnimationFrame(frame); controller.abort(); language.disconnect(); keys.clear();
+      disposed = true; cancelAnimationFrame(frame); controller.abort(); language.disconnect(); keys.clear(); shockwavePending = false;
       closeDialog(); gamePerformance.dispose(); panel.remove();
     },
   };
