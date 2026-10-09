@@ -18,6 +18,7 @@ test('invites once after eligible dwell and loads only after acceptance', async 
   await page.getByRole('button', { name: '开始游戏', exact: true }).click();
   await expect(page.getByText('正在集结')).toBeVisible();
   await page.getByRole('button', { name: '返回首页', exact: true }).click();
+  await page.clock.runFor(1700);
   await page.clock.runFor(11000);
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });

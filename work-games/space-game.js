@@ -1,10 +1,10 @@
 import css from './space-game.css?inline';
-import { mountOpening } from './opening.js';
+import { mountGamePerformance } from './game-performance.js';
 import { createBattle } from './battle.js';
 import { mountBattleView } from './battle-view.js';
 
 export function startGame({ scene, world, leave, text }) {
-  const panel = document.createElement('section'); panel.className = 'space-game';
+  const panel = document.createElement('section'); panel.className = 'space-game'; panel.tabIndex = -1;
   const style = document.createElement('style'); style.textContent = css; panel.append(style);
   const hud = document.createElement('div'); hud.className = 'game-hud'; hud.setAttribute('translate', 'no');
   const status = document.createElement('p'); status.setAttribute('role', 'status');
@@ -12,15 +12,13 @@ export function startGame({ scene, world, leave, text }) {
   score.className = 'game-score';
   const back = document.createElement('button'); back.type = 'button';
   hud.append(status, instructions, score, back); panel.append(hud);
-  const heading = scene.querySelector('.scene-heading');
-  const captures = world.takeOver(); heading.style.visibility = 'hidden';
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const opening = mountOpening(panel, captures, reduced);
+  const gamePerformance = mountGamePerformance({ layer: panel, scene, world, reduced });
   const view = mountBattleView(panel);
   document.body.append(panel);
   const controller = new AbortController(), { signal } = controller;
   const keys = new Set();
-  let phase = 'opening', time = 0, previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
+  let phase = 'opening', previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
   function bounds() {
     return arena ??= { left: 24, right: innerWidth - 24, top: Math.max(160, hud.getBoundingClientRect().bottom + 20), bottom: innerHeight - 20 };
   }
@@ -29,7 +27,8 @@ export function startGame({ scene, world, leave, text }) {
     status.textContent = phase === 'opening' ? text('正在集结', 'Assembling') : phase === 'battle' ? text('星际生存', 'Space survival') : text('本局结束', 'Run complete');
     instructions.textContent = text('WASD / 方向键移动 · P 暂停 · Esc 结束', 'WASD / Arrows to move · P to pause · Esc to end');
     updateScore();
-    back.textContent = phase === 'opening' ? text('返回首页', 'Return home') : text('结束本局', 'End run');
+    back.textContent = text('返回首页', 'Return home');
+    back.hidden = phase !== 'opening';
     battle?.resize(bounds());
   }
   function updateScore() {
@@ -53,24 +52,34 @@ export function startGame({ scene, world, leave, text }) {
     panel.append(dialog); dialog.showModal();
   }
   function beginBattle() {
-    phase = 'battle'; time = 3; keys.clear(); paused = false; previous = 0;
+    phase = 'battle'; keys.clear(); paused = false; previous = 0;
     battle = createBattle({ bounds: bounds(), reducedMotion: reduced });
     labels();
-    opening.render(3, 0, bounds(), battle.state.ship);
+    gamePerformance.advance(0, bounds(), battle.state);
     view.draw(battle.state, bounds());
   }
+  function returnHome() {
+    if (phase === 'returning' || disposed) return;
+    gamePerformance.returnHome();
+    phase = 'returning'; paused = false; previous = 0;
+    keys.clear(); battle?.setPaused(true); closeDialog();
+    hud.hidden = true; panel.querySelector('.game-effects').hidden = true;
+    panel.focus({ preventScroll: true });
+    cancelAnimationFrame(frame); frame = requestAnimationFrame(draw);
+  }
   function finish() {
-    if (phase === 'opening') { leave(); return; }
+    if (phase === 'returning') return;
+    if (phase === 'opening') { returnHome(); return; }
     if (phase === 'results') return;
     phase = 'results'; paused = true; battle.setPaused(true); keys.clear(); cancelAnimationFrame(frame); previous = 0;
     labels();
     modal(text('本局结束', 'Run complete'), score.textContent, [
       [text('再来一局', 'Play again'), () => {
         if (!canResume()) return;
-        closeDialog(); beginBattle(); back.focus({ preventScroll: true });
+        closeDialog(); beginBattle(); (phase === 'opening' ? back : panel).focus({ preventScroll: true });
         view.resize(); frame = requestAnimationFrame(draw);
       }],
-      [text('返回首页', 'Return home'), () => leave()],
+      [text('返回首页', 'Return home'), returnHome],
     ]);
   }
   back.onclick = finish;
@@ -78,9 +87,12 @@ export function startGame({ scene, world, leave, text }) {
     frame = 0;
     if (paused || disposed) return;
     const dt = previous ? Math.min((now - previous) / 1000, .1) : 0; previous = now;
+    if (phase === 'returning') {
+      if (gamePerformance.advance(dt, bounds()) === 'returned') { leave(); return; }
+      frame = requestAnimationFrame(draw); return;
+    }
     if (phase === 'opening') {
-      time = Math.min(3, time + dt);
-      if (time === 3) beginBattle();
+      if (gamePerformance.advance(dt, bounds()) === 'ready') beginBattle();
     } else if (phase === 'battle') {
       battle.advance(dt, {
         x: Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft')),
@@ -89,18 +101,18 @@ export function startGame({ scene, world, leave, text }) {
       updateScore(); view.draw(battle.state, bounds());
       if (battle.state.ended) { finish(); return; }
     }
-    opening.render(time, battle?.state.seconds ?? 0, bounds(), battle?.state.ship);
+    if (phase === 'battle') gamePerformance.advance(0, bounds(), battle.state);
     frame = requestAnimationFrame(draw);
   }
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
     closeDialog(); paused = false; previous = 0; keys.clear();
     battle?.resize(bounds()); battle?.setPaused(false); view.resize();
-    back.focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
+    (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   }
   function pause() {
     keys.clear();
-    if (paused || disposed || phase === 'results') return;
+    if (paused || disposed || phase === 'results' || phase === 'returning') return;
     paused = true; battle?.setPaused(true); cancelAnimationFrame(frame); previous = 0;
     modal(text('游戏已暂停', 'Game paused'), text('回到至少 800 × 600 的窗口后，手动继续。', 'Return to a window of at least 800 × 600, then resume.'), [
       [text('继续游戏', 'Resume game'), resume],
@@ -118,12 +130,12 @@ export function startGame({ scene, world, leave, text }) {
     if (movement.has(key) && phase === 'battle' && !paused) { event.preventDefault(); keys.add(key); }
   }, { signal });
   window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); }, { signal });
-  labels(); opening.render(0, 0, bounds()); back.focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
+  labels(); gamePerformance.advance(0, bounds()); (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   return {
-    escape() { if (phase === 'results') leave(); else finish(); },
+    escape() { if (phase === 'results') returnHome(); else finish(); },
     dispose() {
       disposed = true; cancelAnimationFrame(frame); controller.abort(); language.disconnect(); keys.clear();
-      closeDialog(); panel.remove(); world.restore(); heading.style.visibility = '';
+      closeDialog(); gamePerformance.dispose(); panel.remove();
     },
   };
 }

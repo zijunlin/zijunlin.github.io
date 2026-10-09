@@ -35,8 +35,9 @@ test('movement, pause, results and replay preserve the site and reset the run', 
   await expect(page.locator('.game-score')).toContainText('分数: 0');
   await page.getByRole('button', { name: 'English', exact: true }).click();
   await expect(page.getByText('Space survival', { exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'End run', exact: true }).click();
+  await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Return home', exact: true }).click();
+  await page.clock.runFor(1700);
   await expect(page.locator('.space-game')).toHaveCount(0);
   await page.locator('nav a[href="#about"]').click();
   await expect(page.locator('#about-panel-title')).toBeFocused();

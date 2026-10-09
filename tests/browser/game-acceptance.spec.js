@@ -70,8 +70,9 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
       await expect(page.locator('.game-effects')).toHaveCount(1);
       await expect(page.locator('.game-satellite')).toHaveCount(4);
     }
-    await page.getByRole('button', { name: '结束本局', exact: true }).click();
+    await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '返回首页', exact: true }).click();
+  await page.clock.runFor(1700);
     await expect(page.locator('.space-game')).toHaveCount(0);
     expect(await page.evaluate(() => window.pendingFrames())).toBe(baselineFrames);
     await page.locator('nav a[href="#work"]').click();
