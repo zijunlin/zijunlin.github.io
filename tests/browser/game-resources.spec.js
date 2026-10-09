@@ -56,7 +56,10 @@ test('orange ring drops refill the visible shockwave reserve', async ({ page }) 
   });
   await page.clock.install(); await page.goto('/'); await page.clock.runFor(10100);
   await page.getByRole('button', { name: '开始游戏', exact: true }).click();
-  await page.clock.runFor(3200); await page.clock.runFor(11500);
+  await expect(page.getByText('正在集结')).toBeVisible();
+  await page.clock.runFor(3200);
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
+  await page.clock.runFor(11500);
   const orangePixels = await page.locator('.game-effects').evaluate(canvas => {
     const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let count = 0; for (let i = 0; i < data.length; i += 4) if (data[i] === 255 && data[i + 1] === 187 && data[i + 2] === 102) count++;
