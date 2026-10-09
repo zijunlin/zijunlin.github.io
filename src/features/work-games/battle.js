@@ -5,7 +5,7 @@ const types = [
   { radius: 30, hp: 5, points: 60, speed: .7 },
 ];
 // First-pass tuning: 110px attraction, 260px/s pull, 16px collection, ±6° fan.
-const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2 };
+const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2, edgeInset: 12 };
 const FAN_ANGLE = Math.PI / 30;
 const STEP = 1 / 120;
 const SHOCKWAVE = { radius: 220, duration: .5, damage: 3 };
@@ -51,7 +51,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const points = hitObstacle(obstacle, damage);
     state.score += points;
     if (obstacle.hp === 0) {
-      if (obstacle.resource) state.resources.push({ x: constrain(obstacle.x, bounds.left + 12, bounds.right - 12), y: constrain(obstacle.y, bounds.top + 12, bounds.bottom - 12), kind: obstacle.resource, life: RESOURCE.lifetime });
+      if (obstacle.resource) state.resources.push({ x: constrain(obstacle.x, bounds.left + RESOURCE.edgeInset, bounds.right - RESOURCE.edgeInset), y: constrain(obstacle.y, bounds.top + RESOURCE.edgeInset, bounds.bottom - RESOURCE.edgeInset), kind: obstacle.resource, life: RESOURCE.lifetime });
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
         state.particles.push({ x: obstacle.x, y: obstacle.y, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80, life: .45 });
