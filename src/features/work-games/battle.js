@@ -14,7 +14,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
   const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, shockwaveCharges: 1, shockwaves: [] };
-  let paused = false, remainder = 0, shotWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
+  let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
     const type = types[Math.floor(random() * 3)];
@@ -31,14 +31,19 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     generated++;
     state.obstacles.push({ ...type, resource: generated % 4 === 0 ? 'weapon' : null, x, y, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity, warning: .65, flash: 0 });
   }
-  function fire() {
+  function shot(x, y, angle) {
+    state.bullets.push({ x, y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: 1.9 });
+  }
+  function fireForward() {
     const { x, y } = state.ship;
-    const shot = (x, y, angle) => state.bullets.push({ x, y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: 1.9 });
     if (state.weaponLevel === 0) {
       shot(x - 5, y - 12, -Math.PI / 2); shot(x + 5, y - 12, -Math.PI / 2);
     } else {
       for (const offset of [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset);
     }
+  }
+  function fireSatellites() {
+    const { x, y } = state.ship;
     for (let i = 0; i < 4; i++) {
       const angle = i * Math.PI / 2 + (reducedMotion ? 0 : state.seconds * Math.PI / 3);
       shot(x + Math.cos(angle) * 30, y + Math.sin(angle) * 30, angle);
@@ -71,7 +76,10 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     state.ship.x = constrain(state.ship.x + input.x / magnitude * 300 * dt, bounds.left + 38, bounds.right - 38);
     state.ship.y = constrain(state.ship.y + input.y / magnitude * 300 * dt, bounds.top + 38, bounds.bottom - 38);
     shotWait -= dt;
-    if (shotWait <= 0) { fire(); shotWait += .16; }
+    // Upgrades preserve the pending wait; the next volley starts the new cadence.
+    if (shotWait <= 0) { fireForward(); shotWait += state.weaponLevel >= 2 ? .13 : .16; }
+    satelliteWait -= dt;
+    if (satelliteWait <= 0) { fireSatellites(); satelliteWait += .16; }
     spawnWait -= dt;
     if (spawnWait <= 0) { spawn(); spawnWait += difficultyAt(state.seconds).interval; }
     for (const obstacle of state.obstacles) {
@@ -120,7 +128,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
           if (distance) { resource.x += dx / distance * travel; resource.y += dy / distance * travel; }
           if (distance - travel <= RESOURCE.pickup) {
             resource.life = 0;
-            state.weaponLevel = Math.min(1, state.weaponLevel + 1);
+            state.weaponLevel = Math.min(2, state.weaponLevel + 1);
             state.pickupFeedback = RESOURCE.feedback;
           }
         }
