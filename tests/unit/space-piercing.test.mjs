@@ -43,7 +43,7 @@ test('third weapon pickup unlocks three piercing shots at .13 seconds and leaves
   assert.equal(JSON.stringify(battle.state), frozen);
 });
 
-function arrangeTargets(rows) {
+function arrangeTargets(rows, level = 3) {
   const dt = 1 / 120;
   let draws = 0, sequence = [0, .6, .5, .5, 0];
   const battle = createBattle({ bounds, random: () => sequence[draws++ % 5], reducedMotion: true });
@@ -53,7 +53,7 @@ function arrangeTargets(rows) {
     battle.resize(wide);
   }
   // Collect real drops; resize clamps the ship to their pickup radius.
-  while (battle.state.weaponLevel < 3 && battle.state.seconds < 25) {
+  while (battle.state.weaponLevel < level && battle.state.seconds < 25) {
     if (battle.state.resources.length) {
       battle.resize({ ...bounds, top: -100, bottom: battle.state.resources[0].y + 38 });
       battle.advance(dt);
@@ -61,12 +61,13 @@ function arrangeTargets(rows) {
       battle.resize(bounds);
     } else battle.advance(dt);
   }
-  assert.equal(battle.state.weaponLevel, 3);
+  assert.equal(battle.state.weaponLevel, level);
   const targets = [];
   // Park beyond the projectiles' lifetime, then generate three targets travelling
   // horizontally together. Their spawn order is opposite the upward contact order.
   place(2000, 0);
-  while (targets.length < rows.length && battle.state.seconds < 20) {
+  if (level === 4) battle.advance(2);
+  while (targets.length < rows.length && battle.state.seconds < 30) {
     const y = rows[targets.length];
     const x = targets.length ? targets[0].x + targets[0].vx * .65 : 0;
     battle.resize({ left: x + 21, right: 2100, top: -100, bottom: 100 });
@@ -121,4 +122,12 @@ test('a piercing bolt crosses one target over many steps, then disappears on its
   for (let i = 0; i < 20 && targets[1].hp === 3; i++) battle.advance(dt);
   assert.deepEqual(targets.map(t => t.hp), [2, 2]);
   assert.ok(!battle.state.bullets.includes(shot));
+});
+
+test('level four piercing shots each damage two different targets once', () => {
+  const { battle, targets, dt } = arrangeTargets([-1, 0, 1], 4);
+  for (let i = 0; i < 220 && targets.every(t => t.hp === 3); i++) battle.advance(dt);
+  assert.deepEqual(targets.map(t => t.hp), [3, 2, 2]);
+  battle.advance(dt * 3);
+  assert.deepEqual(targets.map(t => t.hp), [3, 2, 2]);
 });

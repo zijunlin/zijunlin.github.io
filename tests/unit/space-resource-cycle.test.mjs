@@ -17,19 +17,24 @@ test('successful spawns offer weapon, weapon, shockwave resources and a fresh ba
 });
 test('collecting real shockwave drops refills to three without awarding pickup score', () => {
   const battle = game();
-  for (const charges of [2, 3, 3]) {
-    while (!battle.state.resources.some(r => r.kind === 'shockwave') && battle.state.seconds < 45 && !battle.state.ended) battle.advance(1 / 120);
-    const drop = battle.state.resources.find(r => r.kind === 'shockwave');
-    assert.ok(drop, 'a destroyed twelfth obstacle leaves a shockwave drop');
+  const reserves = [];
+  while (reserves.length < 3 && battle.state.seconds < 45 && !battle.state.ended) {
+    battle.advance(1 / 120);
+    const drop = battle.state.resources[0];
+    if (!drop) continue;
     const score = battle.state.score;
     battle.resize({ left: 0, right: 800, top: -100, bottom: drop.y + 38 });
     battle.advance(1 / 120);
-    assert.equal(battle.state.shockwaveCharges, charges);
-    assert.equal(battle.state.score, score);
+    if (drop.kind === 'shockwave') {
+      reserves.push(battle.state.shockwaveCharges);
+      assert.equal(battle.state.score, score);
+      assert.equal(battle.state.pickupScore, 0);
+    }
     assert.ok(!battle.state.resources.includes(drop));
     battle.resize({ left: 0, right: 800, top: 217, bottom: 300 });
     battle.resize({ left: 0, right: 800, top: 0, bottom: 300 });
   }
+  assert.deepEqual(reserves, [2, 3, 3]);
 });
 test('bullets and a shockwave jointly destroy a five-hit resource obstacle with one score and drop', () => {
   let index = 0; const sequence = [.9, .6, .5, .5, 0];

@@ -4,8 +4,8 @@ const types = [
   { radius: 21, hp: 3, points: 30, speed: 1 },
   { radius: 30, hp: 5, points: 60, speed: .7 },
 ];
-// First-pass tuning: 110px attraction, 260px/s pull, 16px collection, ±6° fan.
-const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2, edgeInset: 12 };
+// First-pass tuning: 110px attraction, 260px/s pull, 16px collection, ±6° fan; max-level weapon drops award 50 points.
+const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2, edgeInset: 12, maxWeaponPoints: 50 };
 const FAN_ANGLE = Math.PI / 30;
 const STEP = 1 / 120;
 const SHOCKWAVE = { radius: 220, duration: .5, damage: 3 };
@@ -13,7 +13,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, shockwaveCharges: 1, shockwaves: [] };
+  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, pickupScore: 0, shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
@@ -39,7 +39,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     if (state.weaponLevel === 0) {
       shot(x - 5, y - 12, -Math.PI / 2); shot(x + 5, y - 12, -Math.PI / 2);
     } else {
-      for (const offset of [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset, state.weaponLevel >= 3);
+      for (const offset of state.weaponLevel >= 4 ? [-FAN_ANGLE, -FAN_ANGLE / 3, FAN_ANGLE / 3, FAN_ANGLE] : [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset, state.weaponLevel >= 3);
     }
   }
   function fireSatellites() {
@@ -77,7 +77,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     state.ship.y = constrain(state.ship.y + input.y / magnitude * 300 * dt, bounds.top + 38, bounds.bottom - 38);
     shotWait -= dt;
     // Upgrades preserve the pending wait; the next volley starts the new cadence.
-    if (shotWait <= 0) { fireForward(); shotWait += state.weaponLevel >= 2 ? .13 : .16; }
+    if (shotWait <= 0) { fireForward(); shotWait += state.weaponLevel >= 4 ? .11 : state.weaponLevel >= 2 ? .13 : .16; }
     satelliteWait -= dt;
     if (satelliteWait <= 0) { fireSatellites(); satelliteWait += .16; }
     spawnWait -= dt;
@@ -124,6 +124,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     // A lethal impact stops collection. Expiration wins ties with pickup.
     if (!state.ended) {
       state.pickupFeedback = Math.max(0, state.pickupFeedback - dt);
+      if (state.pickupFeedback === 0) state.pickupScore = 0;
       for (const resource of state.resources) {
         resource.life -= dt;
         if (resource.life <= 1e-10) continue;
@@ -135,7 +136,8 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
           if (distance - travel <= RESOURCE.pickup) {
             resource.life = 0;
             if (resource.kind === 'shockwave') state.shockwaveCharges = Math.min(3, state.shockwaveCharges + 1);
-            else state.weaponLevel = Math.min(3, state.weaponLevel + 1);
+            else if (state.weaponLevel < 4) state.weaponLevel++;
+            else { state.pickupScore += RESOURCE.maxWeaponPoints; state.score += RESOURCE.maxWeaponPoints; }
             state.pickupKind = resource.kind;
             state.pickupFeedback = RESOURCE.feedback;
           }
