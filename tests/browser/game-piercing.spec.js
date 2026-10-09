@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
-test.use({ reducedMotion: 'reduce' });
+import { mkdirSync } from 'node:fs';
+const evidence = process.env.GAME_EVIDENCE_DIR;
+if (evidence) mkdirSync(evidence, { recursive: true });
+for (const motion of ['reduce', 'no-preference']) {
+test.describe(motion, () => {
+test.use({ reducedMotion: motion });
 test.setTimeout(420000);
 test('complete weapon growth draws piercing bolts, shows maximum level and preserves upgrades through pause and replay', async ({ page }) => {
   page.setDefaultTimeout(15000);
@@ -19,6 +24,7 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-weapon')).toHaveText('武器等级: 0');
   await page.clock.runFor(6000);
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-resources.png` });
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(1700); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-weapon')).toContainText('武器等级: 1');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
@@ -38,6 +44,7 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
     return count;
   });
   expect(piercingPixels).toBeGreaterThan(10);
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-piercing.png` });
   await expect(page.locator('.game-weapon')).toContainText('穿透');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(1000); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(4000);
@@ -56,7 +63,41 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await expect(page.locator('.game-weapon')).toContainText('Maximum');
   await expect(page.locator('.game-weapon')).toContainText(`+${gain} points`);
   await expect(page.locator('.game-weapon')).toContainText('Piercing');
+  await page.setViewportSize({ width: 700, height: 500 });
+  await expect(page.getByRole('dialog', { name: 'Game paused' })).toBeVisible();
+  const reserve = await page.locator('.game-shockwave').textContent();
+  await page.keyboard.down('Space');
+  await page.setViewportSize({ width: 800, height: 600 });
+  await page.getByRole('button', { name: 'Resume game', exact: true }).click();
+  await page.clock.runFor(100);
+  await expect(page.locator('.game-shockwave')).toHaveText(reserve);
+  await page.keyboard.up('Space');
+  await page.keyboard.down('Space');
+  await page.clock.runFor(100);
+  const wavePixels = await page.locator('.game-effects').evaluate(canvas => {
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i] === 155 && pixels[i + 1] === 232 && pixels[i + 2] === 255) count++;
+    return count;
+  });
+  expect(wavePixels).toBeGreaterThan(10);
+  const hud = await page.locator('.game-hud').boundingBox();
+  const ship = await page.locator('.game-ship').boundingBox();
+  expect(hud.x).toBeGreaterThanOrEqual(0);
+  expect(hud.x + hud.width).toBeLessThanOrEqual(800);
+  expect(hud.y + hud.height).toBeLessThan(ship.y);
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-wave-800x600.png` });
+  await page.keyboard.up('Space');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Play again', exact: true }).click();
   await expect(page.locator('.game-weapon')).toHaveText('Weapon level: 0');
+  await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+  await page.keyboard.press('Escape');
+  await page.getByRole('button', { name: 'Return home', exact: true }).click();
+  await page.clock.runFor(1700);
+  await expect(page.locator('.space-game, .game-effects, .game-satellite')).toHaveCount(0);
+  await page.locator('nav a[href="#work"]').click();
+  await expect(page.locator('#work-panel-title')).toBeFocused();
 });
+});
+}
