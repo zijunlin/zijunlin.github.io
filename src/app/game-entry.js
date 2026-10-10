@@ -1,3 +1,4 @@
+import { prepareHomeGame } from './home-game-adapter.js';
 import gameUrl from 'virtual:space-game-url';
 
 // This module is the entire eager game boundary. The game owns no resources until accepted.
@@ -41,7 +42,9 @@ export function mountGameEntry(scene, getWorld) {
       if (token !== generation) return;
       if (!eligible()) { leave(); return; }
       closeDialog();
-      session = startGame({ scene, world: getWorld(), leave, text });
+      const presentation = prepareHomeGame(scene, getWorld());
+      try { session = startGame({ presentation, leave, text }); }
+      catch (error) { presentation.dispose(); throw error; }
     } catch {
       if (token !== generation) return;
       show(text('加载失败，请重试', 'Loading failed. Try again.'), [

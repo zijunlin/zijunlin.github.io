@@ -3,8 +3,9 @@ import { mountGamePerformance } from './game-performance.js';
 import { createBattle } from './battle.js';
 import { mountBattleView } from './battle-view.js';
 
-export function startGame({ scene, world, leave, text }) {
+export function startGame({ presentation, leave, text }) {
   const panel = document.createElement('section'); panel.className = 'space-game'; panel.tabIndex = -1;
+  panel.style.setProperty('--game-hud-top', presentation.hudTop);
   const style = document.createElement('style'); style.textContent = css; panel.append(style);
   const hud = document.createElement('div'); hud.className = 'game-hud'; hud.setAttribute('translate', 'no');
   const status = document.createElement('p'); status.setAttribute('role', 'status');
@@ -15,7 +16,7 @@ export function startGame({ scene, world, leave, text }) {
   const back = document.createElement('button'); back.type = 'button';
   hud.append(status, instructions, score, weapon, shockwave, back); panel.append(hud);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const gamePerformance = mountGamePerformance({ layer: panel, scene, world, reduced });
+  const gamePerformance = mountGamePerformance({ layer: panel, presentation, reduced });
   const view = mountBattleView(panel);
   document.body.append(panel);
   const controller = new AbortController(), { signal } = controller;
