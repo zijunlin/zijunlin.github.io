@@ -8,14 +8,13 @@ async function runtimeFiles(directory = gameRoot) {
   const files = [];
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     const url = new URL(entry.name + (entry.isDirectory() ? '/' : ''), directory);
-    if (entry.isDirectory() && !entry.name.startsWith('prototype-')) files.push(...await runtimeFiles(url));
+    if (entry.isDirectory()) files.push(...await runtimeFiles(url));
     else if (entry.isFile() && /\.(js|css)$/.test(entry.name)) files.push(url);
   }
   return files;
 }
 
 test('game runtime owns no homepage imports or homepage DOM vocabulary', async () => {
-  // Historical standalone prototypes are not part of the shipped runtime.
   for (const file of await runtimeFiles()) {
     const name = file.href.slice(gameRoot.href.length);
     const source = await readFile(file, 'utf8');

@@ -15,7 +15,6 @@ html:lang(en) .preview-structure > span { min-width: 0; overflow-wrap: anywhere;
 .language-switch button:focus-visible { outline: 2px solid #dfbf8b; outline-offset: 2px; }
 @media (max-width: 600px) {
   :root { --header-height: 100px; }
-  html:lang(en) { --header-height: 100px; }
   .site-header { flex-wrap: wrap; gap: 10px; padding-block: 12px; }
-  .site-header nav, html:lang(en) .site-header nav { flex-wrap: wrap; gap: 10px; }
+  .site-header nav { flex-wrap: wrap; gap: 10px; }
 }
