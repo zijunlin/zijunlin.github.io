@@ -57,7 +57,7 @@ test('Space natively activates Resume, Replay and Return without queuing a shock
 
 test('a fresh Space immediately after resume is not confused with the previous pulse', async ({ page }) => {
   await page.clock.runFor(12000);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(1700); await page.keyboard.up('ArrowUp');
+  await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-shockwave')).toContainText('2 / 3');
   await page.keyboard.press('Space');
   await page.clock.runFor(16);

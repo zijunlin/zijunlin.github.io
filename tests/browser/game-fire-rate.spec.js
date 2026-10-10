@@ -18,10 +18,11 @@ test('second weapon pickup displays level two and preserves its fan through paus
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-weapon')).toHaveText('武器等级: 0');
-  await page.clock.runFor(6000);
+  // With the arena extended to the navigation, approach the first drop before the second arrives.
+  await page.clock.runFor(5000);
   const greenPixels = await greenResourcePixels(page);
   expect(greenPixels).toBeGreaterThan(10);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(1700); await page.keyboard.up('ArrowUp');
+  await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-weapon')).toContainText('武器等级: 1');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(180);

@@ -23,9 +23,10 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-weapon')).toHaveText('武器等级: 0');
-  await page.clock.runFor(6000);
+  // With the arena extended to the navigation, approach the first drop before the second arrives.
+  await page.clock.runFor(5000);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-resources.png` });
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(1700); await page.keyboard.up('ArrowUp');
+  await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-weapon')).toContainText('武器等级: 1');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(180);
@@ -37,6 +38,8 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-weapon')).toContainText('武器等级: 3');
   await page.clock.runFor(200); // The pickup keeps the pending firing wait.
+  // Move away from the top edge so a newly fired bolt remains on canvas.
+  await page.keyboard.down('ArrowDown'); await page.clock.runFor(300);
   const piercingPixels = await page.locator('.game-effects').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let count = 0;
@@ -46,7 +49,7 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   expect(piercingPixels).toBeGreaterThan(10);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-piercing.png` });
   await expect(page.locator('.game-weapon')).toContainText('穿透');
-  await page.keyboard.down('ArrowDown'); await page.clock.runFor(1000); await page.keyboard.up('ArrowDown');
+  await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(4000);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(1200); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-weapon')).toContainText('武器等级: 4 · 满级');
@@ -85,7 +88,10 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   const ship = await page.locator('.game-ship').boundingBox();
   expect(hud.x).toBeGreaterThanOrEqual(0);
   expect(hud.x + hud.width).toBeLessThanOrEqual(800);
-  expect(hud.y + hud.height).toBeLessThan(ship.y);
+  // HUD now overlays the arena; the ship may pass underneath it.
+  const header = await page.locator('.site-header').boundingBox();
+  expect(ship.y).toBeGreaterThanOrEqual(header.y + header.height);
+  expect(ship.y + ship.height).toBeLessThanOrEqual(600);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-wave-800x600.png` });
   await page.keyboard.up('Space');
   await page.keyboard.press('Escape');
