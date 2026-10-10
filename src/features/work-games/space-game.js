@@ -58,9 +58,20 @@ export function startGame({ presentation, leave, text }) {
     }
     panel.append(dialog); dialog.showModal();
   }
+  // Every lifecycle transition discards the old frame and input together. Keep the
+  // battle paused while releasing its last pulse, before any resumed frame runs.
+  function resetPlayback(suspended) {
+    cancelAnimationFrame(frame); frame = 0; previous = 0;
+    keys.clear(); shockwavePending = false;
+    battle?.setPaused(true);
+    battle?.advance(0);
+    battle?.setPaused(suspended || phase !== 'battle');
+    paused = suspended;
+  }
   function beginBattle() {
-    phase = 'battle'; keys.clear(); shockwavePending = false; paused = false; previous = 0;
+    phase = 'battle';
     battle = createBattle({ bounds: bounds(), reducedMotion: reduced });
+    resetPlayback(false);
     labels();
     gamePerformance.advance(0, bounds(), battle.state);
     view.draw(battle.state, bounds());
@@ -68,17 +79,16 @@ export function startGame({ presentation, leave, text }) {
   function returnHome() {
     if (phase === 'returning' || disposed) return;
     gamePerformance.returnHome();
-    phase = 'returning'; paused = false; previous = 0;
-    keys.clear(); shockwavePending = false; battle?.setPaused(true); closeDialog();
+    phase = 'returning'; resetPlayback(false); closeDialog();
     hud.hidden = true; panel.querySelector('.game-effects').hidden = true;
     panel.focus({ preventScroll: true });
-    cancelAnimationFrame(frame); frame = requestAnimationFrame(draw);
+    frame = requestAnimationFrame(draw);
   }
   function finish() {
     if (phase === 'returning') return;
     if (phase === 'opening') { returnHome(); return; }
     if (phase === 'results') return;
-    phase = 'results'; paused = true; battle.setPaused(true); keys.clear(); shockwavePending = false; cancelAnimationFrame(frame); previous = 0;
+    phase = 'results'; resetPlayback(true);
     labels();
     modal(text('本局结束', 'Run complete'), score.textContent, [
       [text('再来一局', 'Play again'), () => {
@@ -115,16 +125,13 @@ export function startGame({ presentation, leave, text }) {
   }
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
-    closeDialog(); paused = false; previous = 0; keys.clear(); shockwavePending = false;
-    // The page sends pulses; release the previous pulse before accepting fresh input.
-    battle?.advance(0);
-    battle?.resize(bounds()); battle?.setPaused(false); view.resize();
+    closeDialog(); resetPlayback(false);
+    battle?.resize(bounds()); view.resize();
     (phase === 'opening' ? back : panel).focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
   }
   function pause() {
-    keys.clear(); shockwavePending = false;
     if (paused || disposed || phase === 'results' || phase === 'returning') return;
-    paused = true; battle?.setPaused(true); cancelAnimationFrame(frame); previous = 0;
+    resetPlayback(true);
     modal(text('游戏已暂停', 'Game paused'), text('回到至少 800 × 600 的窗口后，手动继续。', 'Return to a window of at least 800 × 600, then resume.'), [
       [text('继续游戏', 'Resume game'), resume],
       [phase === 'opening' ? text('返回首页', 'Return home') : text('结束本局', 'End run'), finish],
@@ -149,7 +156,7 @@ export function startGame({ presentation, leave, text }) {
   return {
     escape() { if (phase === 'results') returnHome(); else finish(); },
     dispose() {
-      disposed = true; cancelAnimationFrame(frame); controller.abort(); language.disconnect(); keys.clear(); shockwavePending = false;
+      disposed = true; resetPlayback(true); controller.abort(); language.disconnect();
       closeDialog(); gamePerformance.dispose(); panel.remove();
     },
   };
