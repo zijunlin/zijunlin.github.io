@@ -1,0 +1,13 @@
+#shader-canvas[hidden] {
+  display: none;
+}
+
+#shader-canvas {
+  position: fixed;
+  inset: -3px;
+  z-index: 1;
+  display: block;
+  width: calc(100% + 6px);
+  height: calc(100% + 6px);
+  pointer-events: none;
+}

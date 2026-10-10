@@ -1,0 +1,24 @@
+/* Allow longer English labels to wrap on small screens. */
+html:lang(en) .preview-tags { flex-wrap: wrap; }
+html:lang(en) .preview-structure > span { min-width: 0; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  html:lang(en) .site-header { flex-wrap: wrap; gap: 10px; padding-block: 12px; }
+  html:lang(en) { --header-height: 90px; }
+  html:lang(en) .site-header nav { flex-wrap: wrap; gap: 12px; }
+  html:lang(en) .work-preview { width: calc(100vw - 32px); padding: 24px 18px; }
+  html:lang(en) .preview-structure { grid-template-columns: 1fr; }
+  html:lang(en) .preview-structure b { transform: rotate(90deg); }
+  html:lang(en) .preview-actions { flex-wrap: wrap; }
+}
+
+.language-switch { display: inline-flex; align-items: center; gap: 2px; padding: 3px; border: 1px solid #ffffff26; border-radius: 6px; }
+.language-switch button { border: 0; border-radius: 3px; padding: 5px 7px; background: transparent; color: inherit; font: inherit; letter-spacing: 0; cursor: pointer; }
+.language-switch button[aria-pressed="true"] { color: #f1f2ed; background: #ffffff16; }
+.language-switch button:hover { color: #f1f2ed; }
+.language-switch button:focus-visible { outline: 2px solid #dfbf8b; outline-offset: 2px; }
+@media (max-width: 600px) {
+  :root { --header-height: 100px; }
+  html:lang(en) { --header-height: 100px; }
+  .site-header { flex-wrap: wrap; gap: 10px; padding-block: 12px; }
+  .site-header nav, html:lang(en) .site-header nav { flex-wrap: wrap; gap: 10px; }
+}

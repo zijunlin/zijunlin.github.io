@@ -6,7 +6,7 @@ export default defineConfig({
   workers: 1,
   // Scene readiness includes asynchronous GPU shader preparation.
   expect: { timeout: 15000 },
-  use: { baseURL: 'http://127.0.0.1:4173', viewport: { width: 1280, height: 800 } },
+  use: { locale: 'zh-CN', baseURL: 'http://127.0.0.1:4173', viewport: { width: 1280, height: 800 } },
   projects: [{ name: 'chromium', use: { channel: 'chrome', launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] } } }],
   webServer: {
     command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',

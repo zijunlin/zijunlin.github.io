@@ -8,8 +8,9 @@ async function enter(page) {
   await page.goto('/');
   await expect(page.locator('#world-entry')).toBeVisible();
   await page.clock.runFor(10100);
-  await page.getByRole('button', { name: '开始游戏', exact: true }).click();
-  await expect(page.getByRole('button', { name: '返回首页', exact: true })).toBeVisible();
+  await expect(page.getByText('正在集结')).toBeVisible();
+  await expect(page.getByRole('button', { name: '返回首页', exact: true })).toHaveCount(0);
+  await expect(page.locator('.space-game')).toBeFocused();
 }
 test('opening retains the world and navigation, then restores original entrances', async ({ page }) => {
   await enter(page);
@@ -138,4 +139,17 @@ test('resizing during return keeps the final orb positions and sizes continuous'
       expect(Math.abs(last[i][dimension] - restored[i][dimension])).toBeLessThan(1);
     }
   }
+});
+
+test('opening pause retains its return action and resumes focus on the game', async ({ page }) => {
+  await enter(page);
+  await page.keyboard.press('p');
+  await expect(page.getByRole('button', { name: '返回首页', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+  await expect(page.locator('.space-game')).toBeFocused();
+  await expect(page.getByRole('button', { name: '返回首页', exact: true })).toHaveCount(0);
+  await page.keyboard.press('p');
+  await page.getByRole('button', { name: '返回首页', exact: true }).click();
+  await page.clock.runFor(1700);
+  await expect(page.locator('.space-game')).toHaveCount(0);
 });
