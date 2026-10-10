@@ -15,7 +15,11 @@ export async function mountWorld(container, state) {
   const worldName = '星辰圆点';
   const layoutName = state.layout === 'A' ? '环绕核心' : '成长路径';
   combination.textContent = `${worldName} · ${layoutName}`;
-  heading.append(eyebrow, title, combination);
+  const metadata = document.createElement('div'); metadata.className = 'world-metadata';
+  const shortcut = document.createElement('span'); shortcut.className = 'world-game-shortcut';
+  shortcut.textContent = 'Shift + G 开始游戏';
+  metadata.append(combination, shortcut);
+  heading.append(eyebrow, title, metadata);
   localize(heading);
   container.replaceChildren(heading);
   const { mountWorldView } = await import('./world-view.js');

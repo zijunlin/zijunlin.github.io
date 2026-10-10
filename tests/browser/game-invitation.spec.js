@@ -149,19 +149,60 @@ test('game shortcut ignores typing, other modifiers, reading and small windows',
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await page.keyboard.press('g');
   await page.keyboard.press('Control+Shift+G');
-  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
   await page.evaluate(() => {
     const input = document.createElement('input'); input.id = 'shortcut-input';
     document.body.append(input); input.focus();
   });
   await page.keyboard.press('Shift+G');
   await expect(page.locator('#shortcut-input')).toHaveValue('G');
-  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
   await page.locator('nav a[href="#about"]').click();
   await page.keyboard.press('Shift+G');
-  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
   await page.locator('nav a[href="#"]').click();
   await page.setViewportSize({ width: 700, height: 500 });
   await page.keyboard.press('Shift+G');
-  await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
+  await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
+});
+
+test('preparing notice follows language switches before opening the game', async ({ page }) => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  await page.route('**/assets/space-game-*.js*', async route => { await pending; await route.continue(); });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.bringToFront();
+  await page.clock.runFor(10500);
+  await expect(page.getByRole('status')).toContainText('正在准备游戏');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Preparing your game… Press Esc to cancel');
+  await page.getByRole('button', { name: '中文', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('正在准备游戏… 按 Esc 取消');
+  await page.keyboard.press('Escape');
+  release();
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+
+test('Shift+G hint starts opening directly and works again after exiting', async ({ page }) => {
+  await page.goto('/?layout=B');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await expect(page.getByText('Shift + G 开始游戏', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByText('Shift + G to play', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: '中文', exact: true }).click();
+  await page.keyboard.press('Shift+G');
+  await expect(page.getByText('正在集结')).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('Shift+G');
+  await expect(page.locator('.space-game')).toHaveCount(1);
+  await page.keyboard.press('Escape');
+  await page.clock.runFor(1700);
+  await expect(page.getByText('Shift + G 开始游戏', { exact: true })).toBeVisible();
+  await page.clock.runFor(11000);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.keyboard.press('Shift+G');
+  await expect(page.getByText('正在集结')).toBeVisible();
 });
