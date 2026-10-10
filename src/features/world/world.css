@@ -177,3 +177,9 @@
   .orb-art, .orb-particles, .orb-caption, .trail-disc-cutout { transition: none; }
   .orb-pulse, .orb-inflow, .orb-infall { animation: none; }
 }
+
+.world-metadata { display:flex; align-items:center; flex-wrap:wrap; gap:8px 16px; }
+.world-game-shortcut { display:none; color:#8da7b6; font-size:10px; }
+@media (pointer: fine) and (hover: hover) and (min-width: 800px) and (min-height: 600px) {
+  .world-game-shortcut { display:inline; }
+}

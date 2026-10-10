@@ -75,22 +75,34 @@ export function mountGameEntry(scene, getWorld) {
       ]);
     }
   }
+  function enter() {
+    if (session || loading || dialog || !eligible() || document.querySelector('dialog[open]')) return;
+    consumed = true;
+    clearInterval(interval);
+    returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
+    load();
+  }
   const interval = setInterval(() => {
     const now = performance.now();
     const delta = Math.min(now - last, 250); last = now;
     if (consumed || !eligible() || document.querySelector('dialog[open]')) return;
     elapsed += delta;
     if (elapsed < 10000) return;
-    consumed = true;
-    clearInterval(interval);
-    returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
-    load();
+    enter();
   }, 100);
   // Capture navigation before site content handlers restore their own focus.
   window.addEventListener('popstate', () => leave(false), { capture: true });
   window.addEventListener('hashchange', () => leave(false), { capture: true });
   window.addEventListener('pagehide', () => leave(false));
   window.addEventListener('keydown', event => {
+    const target = event.target;
+    if (event.key.toLowerCase() === 'g' && event.shiftKey && !event.ctrlKey && !event.altKey && !event.metaKey
+      && !event.repeat && !event.isComposing && !event.defaultPrevented
+      && !target?.isContentEditable && !target?.closest?.('input, textarea, select, [role="textbox"]')) {
+      if (!session && !loading && !dialog && eligible() && !document.querySelector('dialog[open]')) {
+        event.preventDefault(); enter();
+      }
+    }
     if ((dialog || session || loading) && event.key === 'Escape') {
       event.stopImmediatePropagation(); event.preventDefault();
       if (session) session.escape(); else leave();
