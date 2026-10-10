@@ -1,26 +1,27 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 import { PNG } from 'pngjs';
 import { imageDifference } from '../helpers/image-difference.mjs';
 
-test('featured entrance and directory open the same focused work preview', async ({ page }) => {
+test('celestial work entrance leads to a focused preview that can be reopened', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto('/?world=system&seed=3');
-  const world = page.getByRole('region', { name: '抽象系统空间 · 成长路径' });
-  await world.getByRole('link', { name: '精选作品 · 智能语音平台' }).click();
+  await page.goto('/?seed=3');
+  const world = page.getByRole('region', { name: '星辰圆点 · 成长路径' });
+  await world.getByRole('link', { name: '作品集', exact: true }).click();
+  await page.locator('.work-item summary').click();
+  await page.getByRole('link', { name: '查看作品预览' }).click();
   const preview = page.getByRole('dialog', { name: '智能语音平台', exact: true });
   await expect(preview).toBeVisible();
   await expect(page).toHaveURL(/#work\/platform$/);
   await expect(preview.getByRole('img', { name: '对话沟通引擎结构示意' })).toBeVisible();
   await expect(preview.getByText('个人职责：主导平台整体架构、核心系统设计与关键研发。', { exact: true })).toBeVisible();
   await expect(preview.getByRole('list', { name: '作品标签' }).getByRole('listitem')).toHaveText(['架构设计', '对话编排', '渐进迁移']);
-  const detail = preview.getByRole('link', { name: '查看作品详情' });
-  await expect(detail).toHaveAttribute('href', '/platform.html');
-  await expect(detail).toHaveAttribute('target', '_blank');
+  await expect(preview.getByRole('link')).toHaveCount(0);
   await preview.getByRole('button', { name: '关闭作品预览' }).click();
   await expect(preview).toBeHidden();
   await page.getByRole('navigation').getByRole('link', { name: '作品', exact: true }).click();
   const directory = page.getByRole('region', { name: '作品', exact: true });
-  await directory.locator('summary').click();
+  await expect(directory.locator('details')).toHaveAttribute('open', '');
   await directory.getByRole('link', { name: '查看作品预览' }).click();
   await expect(preview).toBeVisible();
   await expect(directory).toBeVisible();
@@ -32,16 +33,15 @@ test('featured entrance and directory open the same focused work preview', async
 for (const [width, height] of [[1024, 768], [1280, 720], [1920, 1080]]) {
   test(`preview content and actions fit without scrolling at ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    await page.goto('/?world=island&seed=0#work/platform');
+    await page.goto('/?seed=0#work/platform');
     const preview = page.getByRole('dialog', { name: '智能语音平台', exact: true });
     await expect(preview).toBeVisible();
     await expect(preview.getByRole('button', { name: '关闭作品预览' })).toBeInViewport();
-    await expect(preview.getByRole('link', { name: '查看作品详情' })).toBeInViewport();
+    await expect(preview.getByRole('button', { name: '返回浏览', exact: true })).toBeInViewport();
     expect(await preview.evaluate(element => element.scrollHeight <= element.clientHeight)).toBe(true);
     const box = await preview.boundingBox();
     expect(Math.abs(box.x + box.width / 2 - width / 2)).toBeLessThan(2);
     expect(Math.abs(box.y + box.height / 2 - height / 2)).toBeLessThan(2);
-    await expect(page.getByRole('group', { name: '主角精灵：随行创造者' })).toBeVisible();
     await page.keyboard.press('Tab');
     expect(await preview.evaluate(element => element.contains(document.activeElement))).toBe(true);
   });
@@ -49,10 +49,10 @@ for (const [width, height] of [[1024, 768], [1280, 720], [1920, 1080]]) {
 
 test('the preview remains readable when world rendering is unavailable', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-  await page.goto('/?world=system&seed=3#work/platform');
+  await page.goto('/?seed=3#work/platform');
   const preview = page.getByRole('dialog', { name: '智能语音平台', exact: true });
   await expect(preview).toBeVisible();
-  await expect(preview.getByRole('link', { name: '查看作品详情' })).toBeVisible();
+  await expect(preview.getByRole('button', { name: '返回浏览', exact: true })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(preview).toBeHidden();
   await expect(page.getByRole('navigation')).toBeVisible();

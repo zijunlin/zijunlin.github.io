@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#08090b" />
     <meta name="description" content="Zijun Lin 的个人网站。" />
     <title>Zijun Lin</title>
-    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/src/styles/home.css" />
   </head>
   <body>
     <canvas id="shader-canvas" aria-hidden="true" hidden></canvas>
@@ -19,7 +19,10 @@
         <a href="#work">作品</a>
         <a href="#notes">心得</a>
         <a href="#about">关于</a>
-        <span>本站</span>
+        <div class="language-switch" role="group" aria-label="切换语言" translate="no">
+          <button type="button" data-language="zh-CN" lang="zh-CN" aria-pressed="false">中文</button>
+          <button type="button" data-language="en" lang="en" aria-pressed="false">English</button>
+        </div>
       </nav>
     </header>
 
@@ -37,7 +40,6 @@
         <h1>世界暂时无法显示</h1>
       </div>
     </main>
-    <script type="module" src="/background.js"></script>
-    <script type="module" src="/world.js"></script>
+    <script type="module" src="/src/app/home.js"></script>
   </body>
 </html>

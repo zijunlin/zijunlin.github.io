@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 test.describe.configure({ timeout: 60000 });
 
 test('career entrance shows the approved timeline and associated work', async ({ page }) => {
-  await page.goto('/?world=system&seed=3');
-  const world = page.getByRole('region', { name: '抽象系统空间 · 成长路径' });
+  await page.goto('/?seed=3');
+  const world = page.getByRole('region', { name: '星辰圆点 · 成长路径' });
   await expect(world.getByRole('link', { name: '职业历程', exact: true })).toBeVisible();
   await world.getByRole('link', { name: '职业历程', exact: true }).click();
   const panel = page.getByRole('region', { name: '职业历程', exact: true });
@@ -23,7 +24,7 @@ test('career entrance shows the approved timeline and associated work', async ({
 });
 
 test('about to career preserves panel hierarchy for back, close and home', async ({ page }) => {
-  await page.goto('/?world=island&seed=0');
+  await page.goto('/?seed=0');
   const nav = page.getByRole('navigation');
   const about = page.getByRole('region', { name: '关于我', exact: true });
   const career = page.getByRole('region', { name: '职业历程', exact: true });
@@ -51,23 +52,23 @@ test('about to career preserves panel hierarchy for back, close and home', async
   await expect(about).toBeHidden();
   await expect(nav.getByRole('link', { name: '首页', exact: true })).toBeFocused();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
-  expect(new URL(page.url()).search).toBe('?world=island&seed=0');
+  expect(new URL(page.url()).search).toBe('?seed=0');
 });
 
 test('direct career links reload and remain readable without WebGL', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-  await page.goto('/?world=system&seed=3#career');
+  await page.goto('/?seed=3#career');
   const career = page.getByRole('region', { name: '职业历程', exact: true });
   await expect(career).toBeVisible();
   await page.reload();
   await expect(career).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('抽象系统空间 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(career).toBeHidden();
-  await expect(page.getByRole('navigation').getByRole('link', { name: '首页', exact: true })).toBeFocused();
+  await expect(page.locator('.celestial-stage').getByRole('link', { name: '职业历程', exact: true })).toBeFocused();
 });
 
-test('career fits all four worlds without moving or covering their entrances', async ({ page }) => {
+test('career preserves both celestial layouts while its panel scrolls', async ({ page }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 1024, height: 768 });
   await page.addInitScript(() => {
@@ -76,10 +77,10 @@ test('career fits all four worlds without moving or covering their entrances', a
       return type === 'webgl' ? null : original.call(this, type, ...args);
     };
   });
-  for (const [form, seed] of [['island', 0], ['island', 4], ['system', 2], ['system', 3]]) {
-    await page.goto(`/?world=${form}&seed=${seed}`);
-    const world = page.getByRole('region', { name: /建筑地形小岛|抽象系统空间/ });
-    const image = world.getByRole('img');
+  for (const seed of [0, 4]) {
+    await page.goto(`/?seed=${seed}`);
+    const world = page.getByRole('region', { name: /星辰圆点/ });
+    const image = world.locator('.celestial-stage');
     await expect(image).toBeVisible();
     await image.screenshot({ animations: 'disabled' });
     const frame = await image.boundingBox();
@@ -88,7 +89,6 @@ test('career fits all four worlds without moving or covering their entrances', a
     const panel = page.getByRole('region', { name: '职业历程', exact: true });
     await expect(panel).toBeVisible();
     const box = await panel.boundingBox();
-    expect(box.x).toBeGreaterThan(frame.x + frame.width + 27);
     await page.mouse.move(1023, 767);
     const after = await image.boundingBox();
     for (const axis of ['x', 'y', 'width', 'height']) expect(after[axis]).toBeCloseTo(frame[axis], 2);

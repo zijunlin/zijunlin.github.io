@@ -1,9 +1,10 @@
 import { test, expect } from '@playwright/test';
+test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 
 test('notes entrances show an honest empty state with shared navigation', async ({ page }) => {
   test.setTimeout(60000);
-  await page.goto('/?world=system&seed=3');
-  const world = page.getByRole('region', { name: '抽象系统空间 · 成长路径' });
+  await page.goto('/?seed=3');
+  const world = page.getByRole('region', { name: '星辰圆点 · 成长路径' });
   const entrance = world.getByRole('link', { name: '随笔', exact: true });
   await entrance.click();
   const notes = page.getByRole('region', { name: '随笔', exact: true });
@@ -34,19 +35,19 @@ test('notes entrances show an honest empty state with shared navigation', async 
   await nav.getByRole('link', { name: '首页', exact: true }).click();
   await expect(notes).toBeHidden();
   await expect(nav.getByRole('link', { name: '首页', exact: true })).toBeFocused();
-  expect(new URL(page.url()).search).toBe('?world=system&seed=3');
+  expect(new URL(page.url()).search).toBe('?seed=3');
 });
 
 test('direct notes links reload and remain usable without world rendering', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-  await page.goto('/?world=island&seed=4#notes');
+  await page.goto('/?seed=4#notes');
   const panel = page.getByRole('region', { name: '随笔', exact: true });
   await expect(panel).toBeVisible();
   await page.reload();
   await expect(panel.getByRole('heading', { name: '还没有发布的随笔' })).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('建筑地形小岛 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(page.getByRole('navigation').getByRole('link', { name: '心得', exact: true })).toBeFocused();
-  expect(new URL(page.url()).search).toBe('?world=island&seed=4');
+  expect(new URL(page.url()).search).toBe('?seed=4');
 });

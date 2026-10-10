@@ -1,17 +1,24 @@
 import gameUrl from 'virtual:space-game-url';
 
-// This module is the entire eager game boundary. The game owns no resources until accepted.
+// This module is the entire eager game boundary. The game owns no resources until eligible automatic entry.
 export function mountGameEntry(scene, getWorld) {
   const fine = matchMedia('(pointer: fine) and (hover: hover)');
   let elapsed = 0, last = performance.now(), consumed = false, generation = 0;
-  let dialog, session, returnFocus;
+  let dialog, session, returnFocus, loadingNotice, loadingTimer;
+  let loading = false;
   const text = (zh, en) => document.documentElement.lang === 'en' ? en : zh;
   const eligible = () => !location.hash.replace('#', '') && !document.hidden && document.hasFocus()
     && fine.matches && innerWidth >= 800 && innerHeight >= 600 && !scene.hidden
     && !document.querySelector('dialog[open]:not([data-game-dialog]), .reading-panel:not([hidden])');
   function closeDialog() { dialog?.close(); dialog?.remove(); dialog = null; }
+  function clearLoading() {
+    loading = false;
+    clearTimeout(loadingTimer);
+    loadingNotice?.remove(); loadingNotice = null;
+  }
   function leave(restoreFocus = true) {
     generation++;
+    clearLoading();
     closeDialog();
     session?.dispose(); session = null;
     if (restoreFocus && !location.hash.replace('#', '')) returnFocus?.focus({ preventScroll: true });
@@ -35,15 +42,27 @@ export function mountGameEntry(scene, getWorld) {
   }
   async function load() {
     const token = ++generation;
-    show(text('正在准备游戏…', 'Preparing your game…'), [[text('取消', 'Cancel'), () => leave()]]);
+    closeDialog();
+    clearLoading();
+    loading = true;
+    loadingTimer = setTimeout(() => {
+      loadingNotice = document.createElement('p');
+      loadingNotice.setAttribute('role', 'status');
+      loadingNotice.textContent = text('正在准备游戏… 按 Esc 取消', 'Preparing your game… Press Esc to cancel');
+      loadingNotice.style.cssText = 'position:fixed;z-index:5;bottom:24px;left:24px;color:#dcebed;pointer-events:none';
+      document.body.append(loadingNotice);
+    }, 300);
     try {
       const { startGame } = await import(/* @vite-ignore */ `${gameUrl}?attempt=${token}`);
       if (token !== generation) return;
       if (!eligible()) { leave(); return; }
-      closeDialog();
-      session = startGame({ scene, world: getWorld(), leave, text });
+      clearLoading();
+      session = startGame({ scene, world: getWorld(), leave, text,
+        getBounds: () => ({ left: 0, right: innerWidth, top: document.querySelector('.site-header').getBoundingClientRect().bottom, bottom: innerHeight }),
+      });
     } catch {
       if (token !== generation) return;
+      clearLoading();
       show(text('加载失败，请重试', 'Loading failed. Try again.'), [
         [text('重试', 'Retry'), load], [text('返回首页', 'Return home'), () => leave()],
       ]);
@@ -58,16 +77,14 @@ export function mountGameEntry(scene, getWorld) {
     consumed = true;
     clearInterval(interval);
     returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
-    show(text('来一场星际冒险？', 'Ready for a space adventure?'), [
-      [text('开始游戏', 'Start game'), load], [text('暂时不了', 'Not now'), () => leave()],
-    ]);
+    load();
   }, 100);
   // Capture navigation before site content handlers restore their own focus.
   window.addEventListener('popstate', () => leave(false), { capture: true });
   window.addEventListener('hashchange', () => leave(false), { capture: true });
   window.addEventListener('pagehide', () => leave(false));
   window.addEventListener('keydown', event => {
-    if ((dialog || session) && event.key === 'Escape') {
+    if ((dialog || session || loading) && event.key === 'Escape') {
       event.stopImmediatePropagation(); event.preventDefault();
       if (session) session.escape(); else leave();
     }

@@ -25,7 +25,6 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
     const baselineFrames = await page.evaluate(() => window.pendingFrames());
     const header = await page.locator('.site-header').boundingBox();
     await page.clock.runFor(10100);
-    await page.getByRole('button', { name: '开始游戏', exact: true }).click();
     await expect(page.getByText('正在集结')).toBeVisible();
     await page.clock.runFor(3200);
     await expect(page.getByText('星际生存', { exact: true })).toBeVisible();

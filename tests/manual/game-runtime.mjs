@@ -36,7 +36,7 @@ try {
       };
     });
     await page.goto('http://127.0.0.1:4175/?seed=0'); await page.bringToFront();
-    await page.getByRole('button', { name: '开始游戏', exact: true }).click({ timeout: 30000 });
+    await page.getByText('正在集结', { exact: true }).waitFor({ timeout: 30000 });
     await page.getByText('星际生存', { exact: true }).waitFor();
     await page.evaluate(() => {
       window.measurement = { intervals: [], interrupted: false, start: performance.now(), backgroundStart: window.backgroundDraws };
