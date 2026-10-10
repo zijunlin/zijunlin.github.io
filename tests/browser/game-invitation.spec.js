@@ -165,3 +165,21 @@ test('game shortcut ignores typing, other modifiers, reading and small windows',
   await page.keyboard.press('Shift+G');
   await expect(page.locator('[data-game-dialog]')).toHaveCount(0);
 });
+
+test('preparing notice follows language switches before opening the game', async ({ page }) => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  await page.route('**/assets/space-game-*.js*', async route => { await pending; await route.continue(); });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.bringToFront();
+  await page.clock.runFor(10500);
+  await expect(page.getByRole('status')).toContainText('正在准备游戏');
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('Preparing your game… Press Esc to cancel');
+  await page.getByRole('button', { name: '中文', exact: true }).click();
+  await expect(page.getByRole('status')).toHaveText('正在准备游戏… 按 Esc 取消');
+  await page.keyboard.press('Escape');
+  release();
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
