@@ -4,7 +4,7 @@ import gameUrl from 'virtual:space-game-url';
 export function mountGameEntry(scene, getWorld) {
   const fine = matchMedia('(pointer: fine) and (hover: hover)');
   let elapsed = 0, last = performance.now(), consumed = false, generation = 0;
-  let dialog, session, returnFocus, loadingNotice, loadingTimer;
+  let dialog, session, returnFocus, loadingNotice, loadingTimer, loadingLanguage;
   let loading = false;
   const text = (zh, en) => document.documentElement.lang === 'en' ? en : zh;
   const eligible = () => !location.hash.replace('#', '') && !document.hidden && document.hasFocus()
@@ -14,6 +14,7 @@ export function mountGameEntry(scene, getWorld) {
   function clearLoading() {
     loading = false;
     clearTimeout(loadingTimer);
+    loadingLanguage?.disconnect(); loadingLanguage = null;
     loadingNotice?.remove(); loadingNotice = null;
   }
   function leave(restoreFocus = true) {
@@ -48,7 +49,13 @@ export function mountGameEntry(scene, getWorld) {
     loadingTimer = setTimeout(() => {
       loadingNotice = document.createElement('p');
       loadingNotice.setAttribute('role', 'status');
-      loadingNotice.textContent = text('正在准备游戏… 按 Esc 取消', 'Preparing your game… Press Esc to cancel');
+      loadingNotice.setAttribute('translate', 'no');
+      const updateNotice = () => {
+        loadingNotice.textContent = text('正在准备游戏… 按 Esc 取消', 'Preparing your game… Press Esc to cancel');
+      };
+      updateNotice();
+      loadingLanguage = new MutationObserver(updateNotice);
+      loadingLanguage.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
       loadingNotice.style.cssText = 'position:fixed;z-index:5;bottom:24px;left:24px;color:#dcebed;pointer-events:none';
       document.body.append(loadingNotice);
     }, 300);
