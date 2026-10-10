@@ -15,6 +15,9 @@ export async function mountWorld(container, state) {
   const worldName = '星辰圆点';
   const layoutName = state.layout === 'A' ? '环绕核心' : '成长路径';
   combination.textContent = `${worldName} · ${layoutName}`;
+  const shortcut = document.createElement('kbd');
+  shortcut.textContent = 'Shift + G'; shortcut.setAttribute('translate', 'no');
+  combination.append(' · ', shortcut);
   heading.append(eyebrow, title, combination);
   localize(heading);
   container.replaceChildren(heading);

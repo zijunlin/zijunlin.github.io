@@ -130,7 +130,8 @@ test('Shift+G invites immediately and can reopen after declining or leaving a ga
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await page.keyboard.press('Shift+G');
   await expect(page.getByRole('dialog', { name: '来一场星际冒险？' })).toBeVisible();
-  await expect(page.getByText('在首页按 Shift + G，可再次打开游戏邀请。')).toBeVisible();
+  await expect(page.locator('.world-combination kbd')).toHaveText('Shift + G');
+  await expect(page.getByText('在首页按 Shift + G，可再次打开游戏邀请。')).toHaveCount(0);
   expect(requests.filter(url => /space-game.*\.(js|css)/.test(url))).toEqual([]);
   await page.getByRole('button', { name: '暂时不了' }).click();
   await page.clock.runFor(11000);

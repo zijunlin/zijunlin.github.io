@@ -2,9 +2,6 @@
 html:lang(en) .preview-tags { flex-wrap: wrap; }
 html:lang(en) .preview-structure > span { min-width: 0; overflow-wrap: anywhere; }
 @media (max-width: 600px) {
-  html:lang(en) .site-header { flex-wrap: wrap; gap: 10px; padding-block: 12px; }
-  html:lang(en) { --header-height: 90px; }
-  html:lang(en) .site-header nav { flex-wrap: wrap; gap: 12px; }
   html:lang(en) .work-preview { width: calc(100vw - 32px); padding: 24px 18px; }
   html:lang(en) .preview-structure { grid-template-columns: 1fr; }
   html:lang(en) .preview-structure b { transform: rotate(90deg); }

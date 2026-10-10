@@ -58,18 +58,30 @@ export function mountGameEntry(scene, getWorld) {
     if (consumed || !eligible() || document.querySelector('dialog[open]')) return;
     elapsed += delta;
     if (elapsed < 10000) return;
+    invite();
+  }, 100);
+  function invite() {
+    if (dialog || session || !eligible()) return;
     consumed = true;
     clearInterval(interval);
     returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
     show(text('来一场星际冒险？', 'Ready for a space adventure?'), [
       [text('开始游戏', 'Start game'), load], [text('暂时不了', 'Not now'), () => leave()],
     ]);
-  }, 100);
+  }
+
   // Capture navigation before site content handlers restore their own focus.
   window.addEventListener('popstate', () => leave(false), { capture: true });
   window.addEventListener('hashchange', () => leave(false), { capture: true });
   window.addEventListener('pagehide', () => leave(false));
   window.addEventListener('keydown', event => {
+    if (event.shiftKey && event.key.toLowerCase() === 'g' && !event.ctrlKey && !event.metaKey && !event.altKey
+      && !event.repeat && !event.isComposing && !event.target.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
+      && !dialog && !session && eligible()) {
+      event.preventDefault();
+      invite();
+      return;
+    }
     if ((dialog || session) && event.key === 'Escape') {
       event.stopImmediatePropagation(); event.preventDefault();
       if (session) session.escape(); else leave();

@@ -16,8 +16,8 @@
 #world-loading svg {
   width: 65%;
   max-width: 430px;
-  fill: none;
-  stroke: #647e8b;
+  fill: #a2d9df;
+  stroke: #a2d9df;
   stroke-width: 1;
   opacity: 0.5;
 }
@@ -76,7 +76,7 @@
   color: #6f8998;
   font-size: 10px;
 }
-
+.world-combination kbd { font: inherit; }
 
 #world-entry {
   position: relative;
@@ -85,22 +85,12 @@
 
 .world-area {
   position: absolute;
-  inset: 110px calc(var(--panel-width) + 32px) 28px 4px;
   display: grid;
   place-items: center;
 }
 
 .world-stage {
   position: relative;
-  width: min(100%, calc((100svh - var(--header-height) - 138px) * 1.454545));
-  aspect-ratio: 640 / 440;
-}
-
-/* The taller browser preview needs a full-width scene rather than an empty
-   desktop reading column. Panels remain above the scene when opened. */
-@media (min-width: 701px) and (max-width: 1000px) and (min-height: 850px) {
-  .world-area { inset: 150px 4px 150px; align-items: start; }
-  .world-stage { width: 100%; }
 }
 
 @media (max-width: 1050px) {
@@ -113,7 +103,10 @@
 
 /* Use the full scene width for the planetary system. */
 .celestial-area { inset: 110px 24px 16px; }
-.celestial-stage { width: 100%; height: 100%; aspect-ratio: auto; }
+.celestial-stage { width: 100%; height: 100%; }
+@media (min-width: 701px) and (max-width: 1000px) and (min-height: 850px) {
+  .celestial-area { align-items: start; }
+}
 @media (max-width: 700px) {
   .celestial-area { inset: 130px 12px 48px; }
 }
