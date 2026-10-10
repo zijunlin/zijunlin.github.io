@@ -8,18 +8,9 @@ function mountArtwork(layer, captures, reduced) {
     const element = document.createElement('div');
     element.className = 'game-satellite';
     element.style.width = element.style.height = `${capture.size}px`;
-    // Keep the captured appearance, but let layout follow the resized return target.
-    capture.art.style.width = '100%';
-    capture.art.style.height = 'auto';
-    capture.art.style.transformOrigin = '50% 50%';
-    const svg = capture.art.querySelector('svg');
-    svg.style.width = '100%'; svg.style.height = 'auto';
     element.append(capture.art);
-    const halo = element.querySelector('.orb-halo');
-    const envelope = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    halo.before(envelope); envelope.append(halo);
     layer.append(element);
-    return { element, envelope };
+    return { element };
   });
   const ship = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   ship.classList.add('game-ship');
@@ -34,7 +25,7 @@ function mountArtwork(layer, captures, reduced) {
     const cy = Math.max(bounds.top + 62, (bounds.bottom + 20) * .44);
     const shipX = center?.x ?? cx;
     const shipY = center?.y ?? blend(cy, bounds.bottom - 45, down);
-    satellites.forEach(({ element, envelope }, i) => {
+    satellites.forEach(({ element }, i) => {
       const capture = captures[i];
       const startAngle = Math.atan2(capture.y - cy, capture.x - cx);
       const angle = blend(startAngle, i * Math.PI / 2 - Math.PI / 2, ease(time / .85))
@@ -46,7 +37,7 @@ function mountArtwork(layer, captures, reduced) {
       const y = reduced ? blend(capture.y, (center?.y ?? bounds.bottom - 45) + Math.sin(i * Math.PI / 2) * 30, ease(time / 3))
         : blend(capture.y, shipY + Math.sin(angle) * radius, gather);
       element.style.transform = `translate(${x - capture.size / 2}px, ${y - capture.size / 2}px) scale(${blend(1, .65, ease(time / 1.7))})`;
-      if (appearanceChanged) envelope.setAttribute('transform', `translate(100 100) scale(${blend(1, .45, ease(time / 1.7))}) translate(-100 -100)`);
+      if (appearanceChanged) capture.setEnvelopeScale(blend(1, .45, ease(time / 1.7)));
     });
     ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px)`;
     if (appearanceChanged) ship.style.opacity = String(ease((time - 1.25) / .55));
@@ -75,11 +66,8 @@ function mountArtwork(layer, captures, reduced) {
 
 // Own the complete visual handoff; the game supplies time, its arena and formation.
 // No independent animation loop or completion callback can outlive disposal.
-export function mountGamePerformance({ layer, scene, world, reduced }) {
-  const heading = scene.querySelector('.scene-heading');
-  const visibility = heading.style.visibility;
-  const captures = world.takeOver();
-  heading.style.visibility = 'hidden';
+export function mountGamePerformance({ layer, presentation, reduced }) {
+  const captures = presentation.satellites;
   const artwork = mountArtwork(layer, captures, reduced);
   let phase = 'opening', elapsed = 0, formation, returnElapsed = 0, disposed = false;
   return {
@@ -88,7 +76,7 @@ export function mountGamePerformance({ layer, scene, world, reduced }) {
       if (phase === 'returning') {
         returnElapsed += dt;
         const progress = Math.min(1, returnElapsed / (reduced ? .25 : 1.5));
-        artwork.returning(progress, elapsed, (formation?.seconds ?? 0) % 6, bounds, formation?.ship, world.returnTargets());
+        artwork.returning(progress, elapsed, (formation?.seconds ?? 0) % 6, bounds, formation?.ship, presentation.returnTargets());
         if (progress === 1) phase = 'returned';
       } else if (phase !== 'returned') {
         if (battle) {
@@ -107,7 +95,7 @@ export function mountGamePerformance({ layer, scene, world, reduced }) {
     dispose() {
       if (disposed) return;
       disposed = true;
-      artwork.remove(); world.restore(); heading.style.visibility = visibility;
+      artwork.remove(); presentation.dispose();
     },
   };
 }

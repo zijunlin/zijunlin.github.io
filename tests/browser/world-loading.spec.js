@@ -19,13 +19,15 @@ async function holdScene(page) {
   return release;
 }
 
-test('slow initialization shows an honest outline then reveals the page', async ({ page }) => {
+test('slow initialization shows celestial points then reveals the page', async ({ page }) => {
   const release = await holdScene(page);
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   const loading = page.getByRole('status');
   await expect(loading).toBeVisible();
   await expect(loading).toHaveText('正在构建世界');
   await expect(loading.locator('svg')).toBeVisible();
+  await expect(loading.locator('svg circle')).toHaveCount(4);
+  await expect(loading.locator('svg ellipse, svg path')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toHaveCount(0);
   await expect(page.getByRole('navigation')).toBeVisible();
   release();

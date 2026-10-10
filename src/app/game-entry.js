@@ -1,3 +1,4 @@
+import { prepareHomeGame } from './home-game-adapter.js';
 import gameUrl from 'virtual:space-game-url';
 
 // This module is the entire eager game boundary. The game owns no resources until eligible automatic entry.
@@ -64,9 +65,9 @@ export function mountGameEntry(scene, getWorld) {
       if (token !== generation) return;
       if (!eligible()) { leave(); return; }
       clearLoading();
-      session = startGame({ scene, world: getWorld(), leave, text,
-        getBounds: () => ({ left: 0, right: innerWidth, top: document.querySelector('.site-header').getBoundingClientRect().bottom, bottom: innerHeight }),
-      });
+      const presentation = prepareHomeGame(scene, getWorld());
+      try { session = startGame({ presentation, leave, text }); }
+      catch (error) { presentation.dispose(); throw error; }
     } catch {
       if (token !== generation) return;
       clearLoading();
