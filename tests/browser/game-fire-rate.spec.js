@@ -1,4 +1,4 @@
-import { greenResourcePixels, forwardFanLanes } from '../helpers/game-canvas.js';
+import { greenResourcePixels, forwardFanLanes, pickupColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(150000);
@@ -29,6 +29,7 @@ test('independent fire-rate pickup shows transient feedback and preserves the fa
   const fan = await forwardFanLanes(page);
   expect(fan).toEqual(['center', 'left', 'right']);
   await page.clock.runFor(2500);
+  expect(await pickupColorPixels(page, [111, 207, 255])).toBeGreaterThan(10);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(800); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-pickup')).toContainText('飞船射速提升');
   await page.keyboard.press('p');

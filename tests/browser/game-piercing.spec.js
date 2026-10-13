@@ -1,3 +1,4 @@
+import { pickupColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const evidence = process.env.GAME_EVIDENCE_DIR;
@@ -39,11 +40,15 @@ test('five independent pickup identities draw effects and transient feedback, pr
   await expect(page.locator('.game-shockwave')).toContainText('2 / 3');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(2000);
+  expect(await pickupColorPixels(page, [255, 225, 120])).toBeGreaterThan(10);
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-movement-drop.png` });
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-pickup')).toContainText('飞船移动速度提升');
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-movement.png` });
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(2000);
+  expect(await pickupColorPixels(page, [210, 167, 255])).toBeGreaterThan(10);
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-piercing-drop.png` });
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-pickup')).toContainText('穿透能力提升');
   await page.keyboard.press('p');
