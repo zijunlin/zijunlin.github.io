@@ -48,12 +48,20 @@ test('five independent pickup identities draw effects and transient feedback, pr
   for (let attempt = 0; attempt < 4; attempt++) {
     if (await page.evaluate(() => window.pickupHistory.some(value => value.includes('穿透能力提升')))) break;
     await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
-    await page.clock.runFor(2000);
     if (motion === 'reduce') {
       const color = attempt === 0 ? [255, 225, 120] : [210, 167, 255];
-      expect(await pickupColorPixels(page, color)).toBeGreaterThan(10);
-      if (evidence) await page.screenshot({ path: `${evidence}/${motion}-${attempt === 0 ? 'movement' : 'piercing'}-drop.png` });
-    }
+      let visible = false;
+      // Later drops can overlap earlier markers at the same position. Observe
+      // the actual drawing over this wait, rather than a single arbitrary frame.
+      for (let frame = 0; frame < 20; frame++) {
+        await page.clock.runFor(100);
+        if (!visible && await pickupColorPixels(page, color) > 10) {
+          visible = true;
+          if (evidence) await page.screenshot({ path: `${evidence}/${motion}-${attempt === 0 ? 'movement' : 'piercing'}-drop.png` });
+        }
+      }
+      expect(visible).toBe(true);
+    } else await page.clock.runFor(2000);
     await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   }
   const history = await page.evaluate(() => window.pickupHistory.join(' | '));
