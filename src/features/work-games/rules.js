@@ -1,3 +1,12 @@
+// Keep the visible hull in the activity area; satellites may extend outside it.
+// Both simulated movement and accumulated touch targets share this boundary.
+export function constrainShipPosition(position, bounds) {
+  return {
+    x: Math.max(bounds.left + 13.2, Math.min(bounds.right - 13.2, position.x)),
+    y: Math.max(bounds.top + 16.5, Math.min(bounds.bottom - 23.1, position.y)),
+  };
+}
+
 // Earliest contact on relative motion, including a target moving during the step.
 export function sweepContact(a0, a1, b0, b1, radius) {
   const x = a0.x - b0.x, y = a0.y - b0.y;

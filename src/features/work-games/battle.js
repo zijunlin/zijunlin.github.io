@@ -3,11 +3,9 @@ import { createSprite } from './sprites.js';
 import { advanceMotion } from './motion.js';
 import { obstacleTypes } from './obstacle-types.js';
 import { createProjectile, projectileProfiles, advanceProjectile } from './projectiles.js';
-import { difficultyAt, hitObstacle, intersectsSweep } from './rules.js';
+import { difficultyAt, hitObstacle, intersectsSweep, constrainShipPosition } from './rules.js';
 // Pickup distances use CSS pixels; feedback lifetime uses battle seconds.
 const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12 };
-// Visible ship viewport, excluding the orbiting satellites.
-const shipInsets = { left: 13.2, right: 13.2, top: 16.5, bottom: 23.1 };
 const STEP = 1 / 120;
 const SHOCKWAVE = { radius: 220, duration: .5, damage: 3 };
 const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
@@ -86,8 +84,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       state.ship.vx = dx * factor; state.ship.vy = dy * factor;
     }
     advanceMotion(state.ship, dt);
-    state.ship.x = constrain(state.ship.x, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
-    state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
+    Object.assign(state.ship, constrainShipPosition(state.ship, bounds));
     state.ship.vx = (state.ship.x - shipBefore.x) / dt;
     state.ship.vy = (state.ship.y - shipBefore.y) / dt;
     shotWait -= dt;
@@ -155,8 +152,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     setPaused(value) { paused = value; if (value) shockwavePending = false; },
     resize(next) {
       bounds = next;
-      state.ship.x = constrain(state.ship.x, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
-      state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
+      Object.assign(state.ship, constrainShipPosition(state.ship, bounds));
     },
   };
 }
