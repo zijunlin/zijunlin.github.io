@@ -14,6 +14,7 @@ async function enter(page) {
 }
 test('opening retains the world and navigation, then restores original entrances', async ({ page }) => {
   await enter(page);
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   const original = await page.locator('.celestial-gate').first().elementHandle();
   await page.clock.runFor(3100);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
@@ -25,10 +26,15 @@ test('opening retains the world and navigation, then restores original entrances
   await page.clock.runFor(350);
   await expect(page.locator('.space-game')).toHaveCount(1);
   await expect(page.locator('.celestial-trails')).toBeHidden();
+  expect(await page.locator('.celestial-trails path').evaluateAll(paths => paths.map(path => path.getAttribute('d')))).toEqual(trailPaths);
   expect(Number(await page.locator('.game-ship').evaluate(ship => getComputedStyle(ship).opacity))).toBeLessThan(.8);
   await page.clock.runFor(1400);
   await expect(page.locator('.celestial-trails')).toBeVisible();
-  expect(await page.locator('.celestial-trails path').evaluateAll(paths => paths.map(path => path.getAttribute('d')))).toEqual(trailPaths);
+  // Returning restores the orbit, then it continues instead of being frozen
+  // indefinitely by the programmatically restored entrance focus.
+  const resumed = await page.locator('.celestial-trails path').evaluateAll(paths => paths.map(path => path.getAttribute('d')));
+  await page.clock.runFor(250);
+  expect(await page.locator('.celestial-trails path').evaluateAll(paths => paths.map(path => path.getAttribute('d')))).not.toEqual(resumed);
   expect(await original.evaluate(node => node.isConnected)).toBe(true);
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
   await expect(page.locator('.celestial-gate').first()).toBeVisible();

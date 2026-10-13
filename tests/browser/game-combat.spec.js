@@ -41,10 +41,10 @@ test('movement, pause, results and replay preserve the site and reset the run', 
   await page.locator('nav a[href="#about"]').click();
   await expect(page.locator('#about-panel-title')).toBeFocused();
 });
-test('small windows cannot resume, and gameplay navigation releases all visuals', async ({ page }) => {
+test('small windows can resume, and gameplay navigation releases all visuals', async ({ page }) => {
   await page.setViewportSize({ width: 700, height: 500 });
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
-  await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toHaveCount(0);
   await page.setViewportSize({ width: 1280, height: 720 });
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
   await page.locator('nav a[href="#work"]').click();
