@@ -1,4 +1,4 @@
-import { pickupColorPixels } from '../helpers/game-canvas.js';
+import { canvasColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const evidence = process.env.GAME_EVIDENCE_DIR;
@@ -55,7 +55,7 @@ test('five independent pickup identities draw effects and transient feedback, pr
       // the actual drawing over this wait, rather than a single arbitrary frame.
       for (let frame = 0; frame < 20; frame++) {
         await page.clock.runFor(100);
-        if (!visible && await pickupColorPixels(page, color) > 10) {
+        if (!visible && await canvasColorPixels(page, color) > 10) {
           visible = true;
           if (evidence) await page.screenshot({ path: `${evidence}/${motion}-${attempt === 0 ? 'movement' : 'piercing'}-drop.png` });
         }

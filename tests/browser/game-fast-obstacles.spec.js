@@ -1,3 +1,4 @@
+import { canvasColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const evidence = process.env.GAME_EVIDENCE_DIR;
@@ -20,12 +21,7 @@ for (const motion of ['reduce', 'no-preference']) {
       await expect(page.getByText('正在集结')).toBeVisible();
       await page.clock.runFor(3200);
       await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
-      const brightPixels = () => page.locator('.game-effects').evaluate(canvas => {
-        const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-        let count = 0;
-        for (let i = 0; i < data.length; i += 4) if (data[i] === 255 && data[i + 1] === 240 && data[i + 2] === 122) count++;
-        return count;
-      });
+      const brightPixels = () => canvasColorPixels(page, [255, 240, 122]);
       expect(await brightPixels()).toBe(0);
       await page.clock.runFor(12000);
       expect(await brightPixels()).toBeGreaterThan(10);
