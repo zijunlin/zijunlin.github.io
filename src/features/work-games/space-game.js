@@ -11,9 +11,9 @@ export function startGame({ presentation, leave, text }) {
   const status = document.createElement('p'); status.setAttribute('role', 'status');
   const instructions = document.createElement('p'), score = document.createElement('p');
   score.className = 'game-score';
-  const weapon = document.createElement('p'); weapon.className = 'game-weapon'; weapon.setAttribute('role', 'status');
+  const feedback = document.createElement('p'); feedback.className = 'game-pickup'; feedback.setAttribute('role', 'status');
   const shockwave = document.createElement('p'); shockwave.className = 'game-shockwave';
-  hud.append(status, instructions, score, weapon, shockwave); panel.append(hud);
+  hud.append(status, instructions, score, feedback, shockwave); panel.append(hud);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gamePerformance = mountGamePerformance({ layer: panel, presentation, reduced });
   const view = mountBattleView(panel);
@@ -36,8 +36,19 @@ export function startGame({ presentation, leave, text }) {
     shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${text('空格释放 · 橙色圆环补充', 'Space to release · Orange rings refill')}`;
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
-    const weaponValue = `${text('武器等级', 'Weapon level')}: ${battle?.state.weaponLevel ?? 0}${battle?.state.weaponLevel === 4 ? text(' · 满级', ' · Maximum') : ''}${battle?.state.weaponLevel >= 3 ? text(' · 穿透 2 个目标', ' · Piercing 2 targets') : ''}${battle?.state.pickupFeedback > 0 && battle?.state.pickupScore > 0 ? ` · +${battle.state.pickupScore} ${text('分', 'points')}` : ''}${battle?.state.pickupFeedback > 0 && battle?.state.pickupKind === 'weapon' ? text(' · 已拾取武器资源', ' · Weapon resource collected') : ''}`;
-    if (weapon.textContent !== weaponValue) weapon.textContent = weaponValue;
+    const pickupText = result => {
+      if (result.full) return result.points ? text('已满级，+50 分', 'At maximum, +50 points') : text('冲击波储备已满', 'Shockwave reserve full');
+      switch (result.kind) {
+        case 'trajectory': return text(`飞船弹道数 +1 · 当前 ${result.value} 条`, `Ship trajectories +1 · Now ${result.value}`);
+        case 'fireRate': return text('飞船射速提升', 'Ship fire rate increased');
+        case 'movement': return text('飞船移动速度提升', 'Ship movement speed increased');
+        case 'piercing': return text('穿透能力提升 · 可命中 2 个目标', 'Piercing increased · Hits 2 targets');
+        case 'shockwave': return text('冲击波 +1', 'Shockwave +1');
+      }
+    };
+    const valueFeedback = battle?.state.pickupFeedback > 0 ? battle.state.pickupResults.map(pickupText).join(' · ') : '';
+    if (feedback.textContent !== valueFeedback) feedback.textContent = valueFeedback;
+    feedback.hidden = !valueFeedback;
   }
   const language = new MutationObserver(labels);
   language.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });

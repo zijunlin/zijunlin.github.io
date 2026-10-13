@@ -20,8 +20,8 @@ test('movement, pause, results and replay preserve the site and reset the run', 
   const before = await page.locator('.game-ship').boundingBox();
   await page.keyboard.down('ArrowLeft'); await page.clock.runFor(500); await page.keyboard.up('ArrowLeft');
   const after = await page.locator('.game-ship').boundingBox();
-  expect(before.x - after.x).toBeGreaterThan(130);
-  expect(before.x - after.x).toBeLessThan(170);
+  expect(before.x - after.x).toBeGreaterThan(180);
+  expect(before.x - after.x).toBeLessThan(210);
   await page.keyboard.press('p');
   await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
   const frozen = await page.locator('.game-score').textContent();
@@ -63,6 +63,8 @@ test('switching language preserves a nonzero combat score', async ({ page }) => 
 });
 
 test('ship reaches the navigation and viewport edges and travels beneath the HUD', async ({ page }) => {
+  // This route renders 15 seconds of software-GPU combat through the public clock.
+  test.setTimeout(150000);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   const move = async (key, duration) => {
     await page.keyboard.down(key); await page.clock.runFor(duration); await page.keyboard.up(key);

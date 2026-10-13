@@ -6,27 +6,27 @@ function game(stopTopSpawns = false) {
   const sequence = [0, .6, .5, .5, 0]; let index = 0;
   return createBattle({ bounds, random: () => stopTopSpawns && index >= 20 ? .4 : sequence[index++ % sequence.length], reducedMotion: true });
 }
-test('every fourth generated obstacle drops one weapon resource only on destruction', () => {
+test('every fourth generated obstacle drops one trajectory resource only on destruction', () => {
   const battle = game();
   battle.advance(3.8);
   assert.equal(battle.state.score, 30);
   assert.equal(battle.state.resources.length, 0);
-  assert.equal(battle.state.weaponLevel, 0);
+  assert.equal(battle.state.trajectoryCount, 2);
   battle.advance(.3);
-  assert.equal(battle.state.obstacles[0].resource, 'weapon');
+  assert.equal(battle.state.obstacles[0].resource, 'trajectory');
   assert.equal(battle.state.obstacles[0].hp, 1);
   assert.equal(battle.state.resources.length, 0);
   battle.advance(.6);
   assert.equal(battle.state.resources.length, 1);
-  assert.equal(battle.state.weaponLevel, 0);
+  assert.equal(battle.state.trajectoryCount, 2);
   battle.advance(.1);
   assert.equal(battle.state.resources.length, 1);
 });
 
 test('approaching a safe drop upgrades to a three-shot fan with unchanged satellite cadence', () => {
   const battle = game(); battle.advance(4.8);
-  while (battle.state.weaponLevel === 0 && battle.state.seconds < 6) battle.advance(1 / 120, { x: 0, y: -1 });
-  assert.equal(battle.state.weaponLevel, 1);
+  while (battle.state.trajectoryCount === 2 && battle.state.seconds < 6) battle.advance(1 / 120, { x: 0, y: -1 });
+  assert.equal(battle.state.trajectoryCount, 3);
   assert.equal(battle.state.ended, false);
   assert.equal(battle.state.resources.length, 0);
   assert.ok(battle.state.pickupFeedback > 0);
@@ -49,9 +49,9 @@ test('uncollected resources expire after eight battle seconds and pause freezes 
   assert.ok(battle.state.resources.includes(drop));
   battle.advance(1 / 120);
   assert.ok(!battle.state.resources.includes(drop));
-  assert.equal(battle.state.weaponLevel, 0);
+  assert.equal(battle.state.trajectoryCount, 2);
   const fresh = game(); fresh.advance(3.8);
-  assert.equal(fresh.state.weaponLevel, 0); assert.equal(fresh.state.resources.length, 0);
+  assert.equal(fresh.state.trajectoryCount, 2); assert.equal(fresh.state.resources.length, 0);
 });
 
 test('failed safe-spawn attempts do not advance the four-obstacle resource cycle', () => {
@@ -65,7 +65,7 @@ test('failed safe-spawn attempts do not advance the four-obstacle resource cycle
     battle.advance(1 / 120);
     for (const target of battle.state.obstacles) if (!seen.has(target)) { seen.add(target); kinds.push(target.resource); }
   }
-  assert.deepEqual(kinds, [null, null, null, 'weapon']);
+  assert.deepEqual(kinds, [null, null, null, 'trajectory']);
 });
 
 test('expiration takes priority when the ship reaches a drop on its final step', () => {
@@ -74,6 +74,44 @@ test('expiration takes priority when the ship reaches a drop on its final step',
   battle.advance(drop.life - 1 / 120);
   battle.resize({ left: 0, right: 800, top: -100, bottom: drop.y + 38 });
   battle.advance(1 / 120);
-  assert.equal(battle.state.weaponLevel, 0);
+  assert.equal(battle.state.trajectoryCount, 2);
   assert.ok(!battle.state.resources.includes(drop));
+});
+
+test('a real drop attracts at 720 CSS px/s only inside 110 px and collects without overshooting', () => {
+  const battle = game(true); battle.advance(4.8);
+  const drop = battle.state.resources[0];
+  const placeShip = (x, y) => {
+    battle.resize({ left: x - 13.2, right: x + 13.2, top: y - 16.5, bottom: y + 23.1 });
+    battle.resize(bounds);
+  };
+  placeShip(drop.x, drop.y + 111);
+  const start = { x: drop.x, y: drop.y };
+  battle.advance(1 / 120);
+  assert.equal(drop.y, start.y);
+  placeShip(drop.x, drop.y + 110);
+  battle.advance(1 / 120);
+  assert.ok(Math.abs(drop.y - start.y - 6) < 1e-8);
+  assert.equal(drop.x, start.x);
+  placeShip(drop.x + 200, drop.y + 50);
+  const stopped = { x: drop.x, y: drop.y };
+  battle.advance(1 / 120);
+  assert.equal(drop.x, stopped.x);
+  assert.equal(drop.y, stopped.y);
+  placeShip(drop.x, drop.y + 22);
+  battle.advance(1 / 120);
+  assert.equal(battle.state.trajectoryCount, 3);
+  assert.equal(battle.state.resources.length, 0);
+  assert.ok(drop.y <= battle.state.ship.y);
+});
+
+
+test('attraction clamps the final move to a drop already within one simulation step of the ship', () => {
+  const battle = game(true); battle.advance(4.8);
+  const drop = battle.state.resources[0];
+  battle.resize({ ...bounds, top: -100, bottom: drop.y + 25.1 });
+  battle.advance(1 / 120);
+  assert.ok(Math.abs(drop.y - battle.state.ship.y) < 1e-8);
+  assert.equal(battle.state.trajectoryCount, 3);
+  assert.equal(battle.state.resources.length, 0);
 });

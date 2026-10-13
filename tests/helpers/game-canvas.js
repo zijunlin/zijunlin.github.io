@@ -24,3 +24,13 @@ export async function forwardFanLanes(page) {
     return [...lanes].sort();
   });
 }
+
+// Count rendered colors without exposing or mutating simulation state.
+export async function canvasColorPixels(page, color) {
+  return page.locator('.game-effects').evaluate((canvas, rgb) => {
+    const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
+    let count = 0;
+    for (let i = 0; i < pixels.length; i += 4) if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2]) count++;
+    return count;
+  }, color);
+}

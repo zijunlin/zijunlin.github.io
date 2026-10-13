@@ -20,7 +20,10 @@ function collectTwo() {
 
 test('two collected drops accelerate the three-shot fan while satellites keep .16-second cadence', () => {
   const battle = collectTwo();
-  assert.equal(battle.state.weaponLevel, 2);
+  assert.equal(battle.state.trajectoryCount, 3);
+  assert.equal(battle.state.fireInterval, .13);
+  assert.equal(battle.state.ship.movementSpeed, 390);
+  assert.equal(battle.state.piercing, false);
   assert.equal(battle.state.ended, false);
   assert.equal(battle.state.resources.length, 0);
   battle.resize({ left: -2000, right: 2000, top: -2000, bottom: 2000 });
@@ -37,7 +40,9 @@ test('two collected drops accelerate the three-shot fan while satellites keep .1
     if (otherSatellites.length) { satellites += otherSatellites.length / 3 * 4; satelliteTimes.push(battle.state.seconds); }
   }
   assert.equal(forward, 30);
-  assert.equal(satellites, 36);
+  // A 1.3-second observation spans eight or nine .16-second volleys,
+  // depending on the independently preserved satellite phase.
+  assert.ok(satellites === 32 || satellites === 36);
   for (let i = 1; i < forwardTimes.length; i++) assert.ok(Math.abs(forwardTimes[i] - forwardTimes[i - 1] - .13) < 1 / 120);
   for (let i = 1; i < satelliteTimes.length; i++) assert.ok(Math.abs(satelliteTimes[i] - satelliteTimes[i - 1] - .16) < 1 / 120);
   battle.setPaused(true); const frozen = JSON.stringify(battle.state);
