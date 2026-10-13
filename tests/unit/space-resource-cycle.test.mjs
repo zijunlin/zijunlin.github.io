@@ -1,9 +1,11 @@
+import { ordinarySpawnRandom } from '../helpers/ordinary-spawn-random.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 function game() {
-  const sequence = [0, .6, .5, .5, 0]; let index = 0;
-  return createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: () => sequence[index++ % sequence.length], reducedMotion: true });
+  const sequence = [0, .6, .5, .5, 0];
+  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence, () => battle.state.seconds), reducedMotion: true });
+  return battle;
 }
 test('successful spawns offer weapon, weapon, shockwave resources and a fresh battle restarts the cycle', () => {
   for (const battle of [game(), game()]) {
@@ -37,8 +39,8 @@ test('collecting real shockwave drops refills to three without awarding pickup s
   assert.deepEqual(reserves, [2, 3, 3]);
 });
 test('bullets and a shockwave jointly destroy a five-hit resource obstacle with one score and drop', () => {
-  let index = 0; const sequence = [.9, .6, .5, .5, 0];
-  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: () => sequence[index++ % 5], reducedMotion: true });
+  const sequence = [.9, .6, .5, .5, 0];
+  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence, () => battle.state.seconds), reducedMotion: true });
   battle.advance(4.2);
   const target = battle.state.obstacles.find(o => o.resource);
   assert.equal(target.hp, 5);
