@@ -1,3 +1,4 @@
+import { applyPickup, dropCycle } from './abilities.js';
 import { createSprite, moveSprite } from './sprites.js';
 import { difficultyAt, hitObstacle, intersectsSweep, sweepContact } from './rules.js';
 const types = [
@@ -5,9 +6,8 @@ const types = [
   { radius: 21, hp: 3, points: 30, sizeSpeedMultiplier: 1 },
   { radius: 30, hp: 5, points: 60, sizeSpeedMultiplier: .7 },
 ];
-// First-pass tuning: 110px attraction, 720px/s pull, 16px collection, ±6° fan; max-level weapon drops award 50 points.
-const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12, maxWeaponPoints: 50 };
-const FAN_ANGLE = Math.PI / 30;
+// Pickup distances use CSS pixels; feedback lifetime uses battle seconds.
+const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12 };
 // Visible ship viewport, excluding the orbiting satellites.
 const shipInsets = { left: 13.2, right: 13.2, top: 16.5, bottom: 23.1 };
 const STEP = 1 / 120;
@@ -16,7 +16,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: 390 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, pickupScore: 0, shockwaveCharges: 1, shockwaves: [] };
+  const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: 390 }, bullets: [], obstacles: [], particles: [], resources: [], trajectoryCount: 2, fireInterval: .16, piercing: false, pickupFeedback: 0, pickupScore: 0, pickupResults: [], shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
@@ -34,17 +34,18 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const fast = state.seconds >= 9 && random() < .15;
     const velocity = baseVelocity * (fast ? 2 : 1);
     generated++;
-    state.obstacles.push({ ...type, fast, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? (generated % 12 === 0 ? 'shockwave' : 'weapon') : null, warning: .65, flash: 0 });
+    state.obstacles.push({ ...type, fast, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? dropCycle[(generated / 4 - 1) % dropCycle.length] : null, warning: .65, flash: 0 });
   }
   function shot(x, y, angle, piercing = false) {
     state.bullets.push({ ...createSprite({ x, y, radius: 2, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520 }), life: 1.9, piercing, hitTargets: new Set() });
   }
   function fireForward() {
     const { x, y } = state.ship;
-    if (state.weaponLevel === 0) {
-      shot(x - 5, y - 12, -Math.PI / 2); shot(x + 5, y - 12, -Math.PI / 2);
+    if (state.trajectoryCount === 2) {
+      shot(x - 5, y - 12, -Math.PI / 2, state.piercing); shot(x + 5, y - 12, -Math.PI / 2, state.piercing);
     } else {
-      for (const offset of state.weaponLevel >= 4 ? [-FAN_ANGLE, -FAN_ANGLE / 3, FAN_ANGLE / 3, FAN_ANGLE] : [-FAN_ANGLE, 0, FAN_ANGLE]) shot(x, y - 12, -Math.PI / 2 + offset, state.weaponLevel >= 3);
+      const halfAngle = (12 + (state.trajectoryCount - 3) * 108 / 21) * Math.PI / 360;
+      for (let i = 0; i < state.trajectoryCount; i++) shot(x, y - 12, -Math.PI / 2 - halfAngle + i * halfAngle * 2 / (state.trajectoryCount - 1), state.piercing);
     }
   }
   function fireSatellites() {
@@ -85,7 +86,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
     shotWait -= dt;
     // Upgrades preserve the pending wait; the next volley starts the new cadence.
-    if (shotWait <= 0) { fireForward(); shotWait += state.weaponLevel >= 4 ? .11 : state.weaponLevel >= 2 ? .13 : .16; }
+    if (shotWait <= 0) { fireForward(); shotWait += state.fireInterval; }
     satelliteWait -= dt;
     if (satelliteWait <= 0) { fireSatellites(); satelliteWait += .16; }
     spawnWait -= dt;
@@ -132,7 +133,8 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     // A lethal impact stops collection. Expiration wins ties with pickup.
     if (!state.ended) {
       state.pickupFeedback = Math.max(0, state.pickupFeedback - dt);
-      if (state.pickupFeedback === 0) state.pickupScore = 0;
+      if (state.pickupFeedback === 0) { state.pickupScore = 0; state.pickupResults = []; }
+      let collected = false;
       for (const resource of state.resources) {
         resource.life -= dt;
         if (resource.life <= 1e-10) continue;
@@ -147,10 +149,10 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
           }
           if (distance - travel <= resource.radius) {
             resource.life = 0;
-            if (resource.kind === 'shockwave') state.shockwaveCharges = Math.min(3, state.shockwaveCharges + 1);
-            else if (state.weaponLevel < 4) state.weaponLevel++;
-            else { state.pickupScore += RESOURCE.maxWeaponPoints; state.score += RESOURCE.maxWeaponPoints; }
-            state.pickupKind = resource.kind;
+            if (!collected) { state.pickupScore = 0; state.pickupResults = []; collected = true; }
+            const results = applyPickup(resource.kind, state);
+            for (const result of results) { state.pickupScore += result.points; state.score += result.points; }
+            state.pickupResults.push(...results);
             state.pickupFeedback = RESOURCE.feedback;
           }
         }

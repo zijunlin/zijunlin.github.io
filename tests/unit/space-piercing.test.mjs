@@ -5,7 +5,7 @@ import { createBattle } from '../../src/features/work-games/battle.js';
 const bounds = { left: 0, right: 800, top: 0, bottom: 300 };
 function grow() {
   const battle = createBattle({ bounds, reducedMotion: true, random: ordinarySpawnRandom(() => [0,.6,.5,.5,0], () => battle.state.seconds) });
-  while (battle.state.weaponLevel < 3 && battle.state.seconds < 20 && !battle.state.ended) {
+  while (!battle.state.piercing && battle.state.seconds < 40 && !battle.state.ended) {
     battle.advance(1 / 120);
     if (battle.state.resources.length) {
       battle.resize({ ...bounds, top: -100, bottom: battle.state.resources[0].y + 23.1 });
@@ -16,9 +16,9 @@ function grow() {
   }
   return battle;
 }
-test('third weapon pickup unlocks three piercing shots at .13 seconds and leaves satellites ordinary', () => {
+test('independent piercing pickup enables three piercing shots at .13 seconds and leaves satellites ordinary', () => {
   const battle = grow();
-  assert.equal(battle.state.weaponLevel, 3);
+  assert.equal(battle.state.piercing, true);
   assert.equal(battle.state.ended, false);
   battle.resize({ left: -2000, right: 2000, top: -2000, bottom: 2000 });
   battle.advance(.2);
@@ -53,7 +53,7 @@ function arrangeTargets(rows, level = 3) {
     battle.resize(wide);
   }
   // Collect real drops; resize clamps the ship to their pickup radius.
-  while (battle.state.weaponLevel < level && battle.state.seconds < 25) {
+  while ((!battle.state.piercing || battle.state.trajectoryCount < (level === 4 ? 4 : 3)) && battle.state.seconds < 35) {
     if (battle.state.resources.length) {
       battle.resize({ ...bounds, top: -100, bottom: battle.state.resources[0].y + 23.1 });
       battle.advance(dt);
@@ -61,13 +61,14 @@ function arrangeTargets(rows, level = 3) {
       battle.resize(bounds);
     } else battle.advance(dt);
   }
-  assert.equal(battle.state.weaponLevel, level);
+  assert.equal(battle.state.trajectoryCount, level === 4 ? 4 : 3);
+  assert.equal(battle.state.piercing, true);
   const targets = [];
   // Park beyond the projectiles' lifetime, then generate three targets travelling
   // horizontally together. Their spawn order is opposite the upward contact order.
   place(2000, 0);
-  if (level === 4) battle.advance(2);
-  while (targets.length < rows.length && battle.state.seconds < 30) {
+  battle.advance(2);
+  while (targets.length < rows.length && battle.state.seconds < 40) {
     const y = rows[targets.length];
     const x = targets.length ? targets[0].x + targets[0].vx * .65 : 0;
     battle.resize({ left: x + 21, right: 2100, top: -100, bottom: 100 });
@@ -81,8 +82,9 @@ function arrangeTargets(rows, level = 3) {
   battle.resize(wide);
   while (targets.some(target => target.warning > 0)) battle.advance(dt);
   // Aim the +6° ray at their future position, away from the central satellite ray.
-  const height = 650, flight = (height - 12 - 23) / (520 * Math.cos(Math.PI / 30));
-  const launchX = targets[0].x + (targets[0].vx - 520 * Math.sin(Math.PI / 30)) * flight;
+  const angle = level === 4 ? (12 + 108 / 21) * Math.PI / 360 : Math.PI / 30;
+  const height = 650, flight = (height - 12 - 23) / (520 * Math.cos(angle));
+  const launchX = targets[0].x + (targets[0].vx - 520 * Math.sin(angle)) * flight;
   place(launchX, height);
 
   return { battle, targets, dt };
@@ -124,7 +126,7 @@ test('a piercing bolt crosses one target over many steps, then disappears on its
   assert.ok(!battle.state.bullets.includes(shot));
 });
 
-test('level four piercing shots each damage two different targets once', () => {
+test('four-trajectory piercing shots each damage two different targets once', () => {
   const { battle, targets, dt } = arrangeTargets([-1, 0, 1], 4);
   for (let i = 0; i < 220 && targets.every(t => t.hp === 3); i++) battle.advance(dt);
   assert.deepEqual(targets.map(t => t.hp), [3, 2, 2]);

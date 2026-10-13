@@ -1,8 +1,8 @@
-import { greenResourcePixels, forwardFanLanes } from '../helpers/game-canvas.js';
+import { greenResourcePixels, forwardFanLanes, pickupColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(150000);
-test('second weapon pickup displays level two and preserves its fan through pause and language changes', async ({ page }) => {
+test('independent fire-rate pickup shows transient feedback and preserves the fan through pause and language changes', async ({ page }) => {
   await page.addInitScript(() => {
     Math.random = () => .5;
     const context = HTMLCanvasElement.prototype.getContext;
@@ -17,27 +17,28 @@ test('second weapon pickup displays level two and preserves its fan through paus
   await expect(page.getByText('正在集结')).toBeVisible();
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
-  await expect(page.locator('.game-weapon')).toHaveText('武器等级: 0');
+  await expect(page.locator('.game-pickup')).toHaveText('');
   // With the arena extended to the navigation, approach the first drop before the second arrives.
   await page.clock.runFor(5000);
   const greenPixels = await greenResourcePixels(page);
   expect(greenPixels).toBeGreaterThan(10);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 1');
+  await expect(page.locator('.game-pickup')).toContainText('飞船弹道数 +1 · 当前 3 条');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(180);
   const fan = await forwardFanLanes(page);
   expect(fan).toEqual(['center', 'left', 'right']);
   await page.clock.runFor(2500);
+  expect(await pickupColorPixels(page, [111, 207, 255])).toBeGreaterThan(10);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(800); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 2');
+  await expect(page.locator('.game-pickup')).toContainText('飞船射速提升');
   await page.keyboard.press('p');
   await page.clock.runFor(3000);
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 2');
+  await expect(page.locator('.game-pickup')).toContainText('飞船射速提升');
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
   await page.getByRole('button', { name: 'English', exact: true }).click();
-  await expect(page.locator('.game-weapon')).toContainText('Weapon level: 2');
+  await expect(page.locator('.game-pickup')).toContainText('Ship fire rate increased');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Play again', exact: true }).click();
-  await expect(page.locator('.game-weapon')).toHaveText('Weapon level: 0');
+  await expect(page.locator('.game-pickup')).toHaveText('');
 });

@@ -20,7 +20,10 @@ function collectTwo() {
 
 test('two collected drops accelerate the three-shot fan while satellites keep .16-second cadence', () => {
   const battle = collectTwo();
-  assert.equal(battle.state.weaponLevel, 2);
+  assert.equal(battle.state.trajectoryCount, 3);
+  assert.equal(battle.state.fireInterval, .13);
+  assert.equal(battle.state.ship.movementSpeed, 390);
+  assert.equal(battle.state.piercing, false);
   assert.equal(battle.state.ended, false);
   assert.equal(battle.state.resources.length, 0);
   battle.resize({ left: -2000, right: 2000, top: -2000, bottom: 2000 });

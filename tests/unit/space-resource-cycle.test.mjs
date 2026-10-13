@@ -7,14 +7,14 @@ function game() {
   const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence, () => battle.state.seconds), reducedMotion: true });
   return battle;
 }
-test('successful spawns offer weapon, weapon, shockwave resources and a fresh battle restarts the cycle', () => {
+test('successful spawns offer the six-item independent resource cycle and a fresh battle restarts the cycle', () => {
   for (const battle of [game(), game()]) {
     const seen = new Set(), kinds = [];
-    while (kinds.length < 12 && battle.state.seconds < 15) {
+    while (kinds.length < 24 && battle.state.seconds < 30) {
       battle.advance(1 / 120);
       for (const target of battle.state.obstacles) if (!seen.has(target)) { seen.add(target); kinds.push(target.resource); }
     }
-    assert.deepEqual(kinds, [null, null, null, 'weapon', null, null, null, 'weapon', null, null, null, 'shockwave']);
+    assert.deepEqual(kinds, [null, null, null, 'trajectory', null, null, null, 'fireRate', null, null, null, 'shockwave', null, null, null, 'movement', null, null, null, 'piercing', null, null, null, 'shockwave']);
   }
 });
 test('collecting real shockwave drops refills to three without awarding pickup score', () => {

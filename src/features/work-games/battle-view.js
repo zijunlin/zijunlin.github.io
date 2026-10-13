@@ -9,14 +9,38 @@ export function mountBattleView(layer) {
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   resize();
-  function weaponMarker(x, y, size) {
+  function trajectoryMarker(x, y, size) {
     context.strokeStyle = '#78f4c4'; context.fillStyle = '#123d32'; context.lineWidth = 2;
     context.beginPath(); context.moveTo(x, y - size); context.lineTo(x + size, y);
     context.lineTo(x, y + size); context.lineTo(x - size, y); context.closePath(); context.fill(); context.stroke();
     context.beginPath(); context.moveTo(x - 3, y + 2); context.lineTo(x, y - 3); context.lineTo(x + 3, y + 2); context.stroke();
   }
   function resourceMarker(kind, x, y, size) {
-    if (kind === 'weapon') { weaponMarker(x, y, size); return; }
+    if (kind === 'trajectory') { trajectoryMarker(x, y, size); return; }
+    if (kind === 'fireRate') {
+      // Blue lightning bolt.
+      context.strokeStyle = '#6fcfff'; context.fillStyle = '#123348'; context.lineWidth = 2;
+      context.beginPath(); context.moveTo(x + size * .3, y - size);
+      context.lineTo(x - size * .7, y + size * .1); context.lineTo(x, y + size * .1);
+      context.lineTo(x - size * .3, y + size); context.lineTo(x + size * .7, y - size * .1);
+      context.lineTo(x, y - size * .1); context.closePath(); context.fill(); context.stroke(); return;
+    }
+    if (kind === 'movement') {
+      // Yellow double chevron.
+      context.strokeStyle = '#ffe178'; context.lineWidth = 2;
+      for (const offset of [-size * .4, size * .4]) {
+        context.beginPath(); context.moveTo(x - size * .7, y + offset + size * .4);
+        context.lineTo(x, y + offset - size * .4); context.lineTo(x + size * .7, y + offset + size * .4); context.stroke();
+      }
+      return;
+    }
+    if (kind === 'piercing') {
+      // Violet arrow crossing a target bar.
+      context.strokeStyle = '#d2a7ff'; context.lineWidth = 2;
+      context.beginPath(); context.moveTo(x, y + size); context.lineTo(x, y - size);
+      context.moveTo(x - size * .6, y - size * .4); context.lineTo(x, y - size); context.lineTo(x + size * .6, y - size * .4);
+      context.moveTo(x - size, y + size * .3); context.lineTo(x + size, y + size * .3); context.stroke(); return;
+    }
     context.strokeStyle = '#ffbb66'; context.fillStyle = '#493018'; context.lineWidth = 2;
     context.beginPath(); context.arc(x, y, size, 0, Math.PI * 2); context.fill(); context.stroke();
     context.beginPath(); context.arc(x, y, size * .45, 0, Math.PI * 2); context.stroke();
