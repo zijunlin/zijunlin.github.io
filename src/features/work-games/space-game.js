@@ -1,6 +1,7 @@
 import css from './space-game.css?inline';
 import { mountGamePerformance } from './game-performance.js';
 import { createBattle } from './battle.js';
+import { constrainShipPosition } from './rules.js';
 import { mountBattleView } from './battle-view.js';
 import { describePickup } from './pickup-presentation.js';
 
@@ -196,9 +197,10 @@ export function startGame({ presentation, leave, text }) {
   }, { signal });
   surface.addEventListener('pointermove', event => {
     if (drag?.id !== event.pointerId) return;
-    const box = bounds();
-    target.x = Math.max(box.left + 13.2, Math.min(box.right - 13.2, target.x + (event.clientX - drag.x) / scale));
-    target.y = Math.max(box.top + 16.5, Math.min(box.bottom - 23.1, target.y + (event.clientY - drag.y) / scale));
+    target = constrainShipPosition({
+      x: target.x + (event.clientX - drag.x) / scale,
+      y: target.y + (event.clientY - drag.y) / scale,
+    }, bounds());
     drag.x = event.clientX; drag.y = event.clientY;
   }, { signal });
   for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) surface.addEventListener(type, event => {

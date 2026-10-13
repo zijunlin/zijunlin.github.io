@@ -118,3 +118,22 @@ test('mobile combat canvas uses viewport pixel density instead of magnifying its
   expect(raster.width).toBeCloseTo(raster.expectedWidth, 0);
   expect(raster.height).toBeCloseTo(raster.expectedHeight, 0);
 });
+
+test('dragging beyond the ship edge does not delay an immediate reversal', async ({ page }) => {
+  await enter(page);
+  await finger(page, 'touchStart', 350, 500);
+  await finger(page, 'touchMove', 10, 500);
+  await page.clock.runFor(1100);
+  const edge = await page.locator('.game-ship').boundingBox();
+  expect(edge.x).toBeGreaterThanOrEqual(-1);
+  expect(edge.x).toBeLessThan(2);
+  // The extra drag beyond the reachable edge must not accumulate as a target
+  // that the finger has to undo before the ship can move in the other direction.
+  await finger(page, 'touchMove', 40, 500);
+  await page.clock.runFor(300);
+  await finger(page, 'touchEnd');
+  await page.clock.runFor(400);
+  const reversed = await page.locator('.game-ship').boundingBox();
+  expect(reversed.x - edge.x).toBeGreaterThan(28);
+  expect(reversed.x - edge.x).toBeLessThan(32);
+});
