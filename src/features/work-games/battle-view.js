@@ -39,7 +39,7 @@ export function mountBattleView(layer) {
         context.stroke();
       } else {
         context.fillStyle = '#c9f5fa';
-        context.beginPath(); context.arc(bullet.x, bullet.y, 2, 0, Math.PI * 2); context.fill();
+        context.beginPath(); context.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2); context.fill();
       }
     }
     for (const obstacle of state.obstacles) {

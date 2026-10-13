@@ -77,3 +77,41 @@ test('expiration takes priority when the ship reaches a drop on its final step',
   assert.equal(battle.state.weaponLevel, 0);
   assert.ok(!battle.state.resources.includes(drop));
 });
+
+test('a real drop attracts at 720 CSS px/s only inside 110 px and collects without overshooting', () => {
+  const battle = game(true); battle.advance(4.8);
+  const drop = battle.state.resources[0];
+  const placeShip = (x, y) => {
+    battle.resize({ left: x - 13.2, right: x + 13.2, top: y - 16.5, bottom: y + 23.1 });
+    battle.resize(bounds);
+  };
+  placeShip(drop.x, drop.y + 111);
+  const start = { x: drop.x, y: drop.y };
+  battle.advance(1 / 120);
+  assert.equal(drop.y, start.y);
+  placeShip(drop.x, drop.y + 110);
+  battle.advance(1 / 120);
+  assert.ok(Math.abs(drop.y - start.y - 6) < 1e-8);
+  assert.equal(drop.x, start.x);
+  placeShip(drop.x + 200, drop.y + 50);
+  const stopped = { x: drop.x, y: drop.y };
+  battle.advance(1 / 120);
+  assert.equal(drop.x, stopped.x);
+  assert.equal(drop.y, stopped.y);
+  placeShip(drop.x, drop.y + 22);
+  battle.advance(1 / 120);
+  assert.equal(battle.state.weaponLevel, 1);
+  assert.equal(battle.state.resources.length, 0);
+  assert.ok(drop.y <= battle.state.ship.y);
+});
+
+
+test('attraction clamps the final move to a drop already within one simulation step of the ship', () => {
+  const battle = game(true); battle.advance(4.8);
+  const drop = battle.state.resources[0];
+  battle.resize({ ...bounds, top: -100, bottom: drop.y + 25.1 });
+  battle.advance(1 / 120);
+  assert.ok(Math.abs(drop.y - battle.state.ship.y) < 1e-8);
+  assert.equal(battle.state.weaponLevel, 1);
+  assert.equal(battle.state.resources.length, 0);
+});

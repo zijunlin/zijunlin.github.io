@@ -37,7 +37,9 @@ test('two collected drops accelerate the three-shot fan while satellites keep .1
     if (otherSatellites.length) { satellites += otherSatellites.length / 3 * 4; satelliteTimes.push(battle.state.seconds); }
   }
   assert.equal(forward, 30);
-  assert.equal(satellites, 36);
+  // A 1.3-second observation spans eight or nine .16-second volleys,
+  // depending on the independently preserved satellite phase.
+  assert.ok(satellites === 32 || satellites === 36);
   for (let i = 1; i < forwardTimes.length; i++) assert.ok(Math.abs(forwardTimes[i] - forwardTimes[i - 1] - .13) < 1 / 120);
   for (let i = 1; i < satelliteTimes.length; i++) assert.ok(Math.abs(satelliteTimes[i] - satelliteTimes[i - 1] - .16) < 1 / 120);
   battle.setPaused(true); const frozen = JSON.stringify(battle.state);
