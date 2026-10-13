@@ -63,7 +63,7 @@ function mountArtwork(layer, captures, reduced) {
     } : undefined);
     ship.style.opacity = String((1 - ease(progress / .4)) * ease((startTime - 1.25) / .55));
   }
-  return { render, returning, remove() { satellites.forEach(({ element }) => element.remove()); ship.remove(); } };
+  return { render, returning, resetBank() { bank = 0; }, remove() { satellites.forEach(({ element }) => element.remove()); ship.remove(); } };
 }
 
 // Own the complete visual handoff; the game supplies time, its arena and formation.
@@ -82,6 +82,7 @@ export function mountGamePerformance({ layer, presentation, reduced }) {
         if (progress === 1) phase = 'returned';
       } else if (phase !== 'returned') {
         if (battle) {
+          if (formation && battle.seconds < formation.seconds) artwork.resetBank();
           elapsed = 3;
           formation = { seconds: battle.seconds, ship: { ...battle.ship } };
         } else elapsed = Math.min(3, elapsed + dt);

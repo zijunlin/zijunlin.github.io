@@ -35,6 +35,7 @@ export function startGame({ presentation, leave, text }) {
   const surface = document.createElement('div'); surface.className = 'game-touch'; surface.setAttribute('aria-hidden', 'true');
   panel.prepend(surface);
   let drag, target;
+  const activeTouches = new Set();
   function clearDrag() {
     const id = drag?.id; drag = null; target = null;
     if (id !== undefined && surface.hasPointerCapture(id)) surface.releasePointerCapture(id);
@@ -90,7 +91,7 @@ export function startGame({ presentation, leave, text }) {
   // battle paused while releasing its last pulse, before any resumed frame runs.
   function resetPlayback(suspended) {
     cancelAnimationFrame(frame); frame = 0; previous = 0;
-    keys.clear(); shockwavePending = false; clearDrag();
+    keys.clear(); shockwavePending = false; clearDrag(); activeTouches.clear();
     battle?.setPaused(true);
     battle?.advance(0);
     battle?.setPaused(suspended || phase !== 'battle');
@@ -177,8 +178,17 @@ export function startGame({ presentation, leave, text }) {
   screen.orientation?.addEventListener('change', pause, { signal });
   pauseButton.addEventListener('click', pause, { signal });
   waveButton.addEventListener('click', () => { if (phase === 'battle' && !paused) shockwavePending = true; }, { signal });
+  // Observe fingers on controls too: a second contact cancels the pending drag.
+  panel.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch') return;
+    activeTouches.add(event.pointerId);
+    if (activeTouches.size > 1) clearDrag();
+  }, { signal, capture: true });
+  for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, event => {
+    activeTouches.delete(event.pointerId);
+  }, { signal });
   surface.addEventListener('pointerdown', event => {
-    if (drag || event.button !== 0 || phase !== 'battle' || paused) return;
+    if (drag || activeTouches.size > 1 || event.button !== 0 || phase !== 'battle' || paused) return;
     event.preventDefault();
     drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
     target = { x: battle.state.ship.x, y: battle.state.ship.y };

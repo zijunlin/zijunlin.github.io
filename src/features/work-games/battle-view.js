@@ -5,7 +5,8 @@ export function mountBattleView(layer, scale = 1) {
   layer.prepend(canvas);
   const context = canvas.getContext('2d');
   function resize() {
-    const ratio = Math.min(devicePixelRatio || 1, 2);
+    // The parent applies world scale; rasterize at screen density, not world density.
+    const ratio = Math.min(devicePixelRatio || 1, 2) * scale;
     canvas.width = innerWidth / scale * ratio; canvas.height = innerHeight / scale * ratio;
     canvas.style.width = `${innerWidth / scale}px`; canvas.style.height = `${innerHeight / scale}px`;
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
