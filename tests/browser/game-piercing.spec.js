@@ -1,4 +1,4 @@
-import { canvasColorPixels } from '../helpers/game-canvas.js';
+import { observeCanvasColors } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const evidence = process.env.GAME_EVIDENCE_DIR;
@@ -14,6 +14,7 @@ test('five independent pickup identities draw effects and transient feedback, pr
     const context = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
+  await observeCanvasColors(page, [[120, 244, 196], [111, 207, 255], [255, 187, 102], [255, 225, 120], [210, 167, 255]]);
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));
   await page.goto('/');
@@ -48,22 +49,11 @@ test('five independent pickup identities draw effects and transient feedback, pr
   for (let attempt = 0; attempt < 4; attempt++) {
     if (await page.evaluate(() => window.pickupHistory.some(value => value.includes('穿透能力提升')))) break;
     await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
-    if (motion === 'reduce') {
-      const color = attempt === 0 ? [255, 225, 120] : [210, 167, 255];
-      let visible = false;
-      // Later drops can overlap earlier markers at the same position. Observe
-      // the actual drawing over this wait, rather than a single arbitrary frame.
-      for (let frame = 0; frame < 20; frame++) {
-        await page.clock.runFor(100);
-        if (!visible && await canvasColorPixels(page, color) > 10) {
-          visible = true;
-          if (evidence) await page.screenshot({ path: `${evidence}/${motion}-${attempt === 0 ? 'movement' : 'piercing'}-drop.png` });
-        }
-      }
-      expect(visible).toBe(true);
-    } else await page.clock.runFor(2000);
+    await page.clock.runFor(2000);
     await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   }
+  const markers = await page.evaluate(() => window.canvasColorHistory);
+  for (const color of ['#78f4c4', '#6fcfff', '#ffbb66', '#ffe178', '#d2a7ff']) expect(markers[color], `rendered pickup marker ${color}`).toBe(true);
   const history = await page.evaluate(() => window.pickupHistory.join(' | '));
   expect(history).toContain('飞船弹道数'); expect(history).toContain('飞船射速提升');
   expect(history).toContain('冲击波 +1'); expect(history).toContain('飞船移动速度提升');

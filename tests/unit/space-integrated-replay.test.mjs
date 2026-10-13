@@ -1,3 +1,4 @@
+import { ordinarySpawnRandom } from '../helpers/ordinary-spawn-random.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
@@ -6,13 +7,11 @@ const STEP = 1 / 120;
 const bounds = { left: 0, right: 800, top: 0, bottom: 300 };
 const snapshot = battle => structuredClone(battle.state);
 function setup() {
-  let sequence = [.5, .5, .5, .5, .5], draws = 0, index = 0, spawn = 0;
-  const battle = createBattle({ bounds, random: () => {
+  let sequence = [.5, .5, .5, .5, .5], draws = 0, spawn = 0;
+  const ordinary = ordinarySpawnRandom(() => sequence);
+  const battle = createBattle({ bounds, random: purpose => {
     draws++;
-    const value = index === 5 ? (spawn % 4 === 0 ? .1 : .5) : sequence[index];
-    index++;
-    if (index === (battle.state.seconds >= 9 ? 6 : 5)) { index = 0; spawn++; }
-    return value;
+    return purpose === 'fast' ? (++spawn % 4 === 0 ? .1 : .5) : ordinary(purpose);
   }, reducedMotion: true });
   return { battle, setRandom: value => { sequence = value; }, get draws() { return draws; } };
 }

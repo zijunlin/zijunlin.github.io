@@ -1,11 +1,9 @@
 import { applyPickup, dropCycle } from './abilities.js';
-import { createSprite, moveSprite } from './sprites.js';
-import { difficultyAt, hitObstacle, intersectsSweep, sweepContact } from './rules.js';
-const types = [
-  { radius: 12, hp: 1, points: 10, sizeSpeedMultiplier: 1.45 },
-  { radius: 21, hp: 3, points: 30, sizeSpeedMultiplier: 1 },
-  { radius: 30, hp: 5, points: 60, sizeSpeedMultiplier: .7 },
-];
+import { createSprite } from './sprites.js';
+import { advanceMotion } from './motion.js';
+import { obstacleTypes } from './obstacle-types.js';
+import { createProjectile, projectileProfiles, advanceProjectile } from './projectiles.js';
+import { difficultyAt, hitObstacle, intersectsSweep } from './rules.js';
 // Pickup distances use CSS pixels; feedback lifetime uses battle seconds.
 const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12 };
 // Visible ship viewport, excluding the orbiting satellites.
@@ -14,30 +12,31 @@ const STEP = 1 / 120;
 const SHOCKWAVE = { radius: 220, duration: .5, damage: 3 };
 const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
+// Random purposes let deterministic scenarios survive spawn retries; zero-argument sources remain valid.
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
   const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: 390 }, bullets: [], obstacles: [], particles: [], resources: [], trajectoryCount: 2, fireInterval: .16, piercing: false, pickupFeedback: 0, pickupScore: 0, pickupResults: [], shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
-    const type = types[Math.floor(random() * 3)];
+    const type = obstacleTypes[Math.floor(random('type') * obstacleTypes.length)];
     let x, y, valid = false;
     for (let attempt = 0; attempt < 16; attempt++) {
-      const side = Math.floor(random() * 4), along = random();
+      const side = Math.floor(random('side') * 4), along = random('position');
       x = side === 0 ? bounds.left - type.radius : side === 1 ? bounds.right + type.radius : bounds.left + (bounds.right - bounds.left) * along;
       y = side === 2 ? bounds.top - type.radius : side === 3 ? bounds.bottom + type.radius : bounds.top + (bounds.bottom - bounds.top) * along;
       if (Math.hypot(x - state.ship.x, y - state.ship.y) >= 210) { valid = true; break; }
     }
     if (!valid) return;
-    const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random() - .5) * .9;
-    const baseVelocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
-    const fast = state.seconds >= 9 && random() < .15;
+    const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random('heading') - .5) * .9;
+    const baseVelocity = (32 + random('speed') * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
+    const fast = state.seconds >= 9 && random('fast') < .15;
     const velocity = baseVelocity * (fast ? 2 : 1);
     generated++;
     state.obstacles.push({ ...type, fast, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? dropCycle[(generated / 4 - 1) % dropCycle.length] : null, warning: .65, flash: 0 });
   }
   function shot(x, y, angle, piercing = false) {
-    state.bullets.push({ ...createSprite({ x, y, radius: 2, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520 }), life: 1.9, piercing, hitTargets: new Set() });
+    state.bullets.push(createProjectile({ x, y, angle, profile: piercing ? projectileProfiles.piercing : projectileProfiles.ordinary }));
   }
   function fireForward() {
     const { x, y } = state.ship;
@@ -62,7 +61,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const points = hitObstacle(obstacle, damage);
     state.score += points;
     if (obstacle.hp === 0) {
-      if (obstacle.resource) state.resources.push({ ...createSprite({ x: constrain(obstacle.x, bounds.left + RESOURCE.edgeInset, bounds.right - RESOURCE.edgeInset), y: constrain(obstacle.y, bounds.top + RESOURCE.edgeInset, bounds.bottom - RESOURCE.edgeInset), radius: RESOURCE.pickup }), kind: obstacle.resource, life: RESOURCE.lifetime });
+      if (obstacle.resource) state.resources.push({ ...createSprite({ x: constrain(obstacle.x, bounds.left + RESOURCE.edgeInset, bounds.right - RESOURCE.edgeInset), y: constrain(obstacle.y, bounds.top + RESOURCE.edgeInset, bounds.bottom - RESOURCE.edgeInset), radius: RESOURCE.pickup, motion: { kind: 'attraction', range: RESOURCE.attraction, speed: RESOURCE.speed } }), kind: obstacle.resource, life: RESOURCE.lifetime });
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
         state.particles.push({ x: obstacle.x, y: obstacle.y, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80, life: .45 });
@@ -81,7 +80,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const magnitude = Math.max(1, Math.hypot(input.x, input.y));
     state.ship.vx = input.x / magnitude * state.ship.movementSpeed;
     state.ship.vy = input.y / magnitude * state.ship.movementSpeed;
-    moveSprite(state.ship, dt);
+    advanceMotion(state.ship, dt);
     state.ship.x = constrain(state.ship.x, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
     state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
     shotWait -= dt;
@@ -95,28 +94,9 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       obstacle.before = { x: obstacle.x, y: obstacle.y };
       obstacle.flash = Math.max(0, obstacle.flash - dt);
       if (obstacle.warning > 0) { obstacle.warning = Math.max(0, obstacle.warning - dt); continue; }
-      moveSprite(obstacle, dt);
+      advanceMotion(obstacle, dt);
     }
-    for (const bullet of state.bullets) {
-      const before = { x: bullet.x, y: bullet.y };
-      const liveFor = Math.min(dt, bullet.life);
-      moveSprite(bullet, liveFor); bullet.life -= dt;
-      if (liveFor <= 0) continue;
-      const contacts = [];
-      const fraction = liveFor / dt;
-      for (const obstacle of state.obstacles) {
-        if (obstacle.warning > 0 || obstacle.hp <= 0 || bullet.hitTargets.has(obstacle)) continue;
-        const obstacleEnd = { x: obstacle.before.x + (obstacle.x - obstacle.before.x) * fraction, y: obstacle.before.y + (obstacle.y - obstacle.before.y) * fraction };
-        const time = sweepContact(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + bullet.radius);
-        if (time !== null) contacts.push({ obstacle, time });
-      }
-      contacts.sort((a, b) => a.time - b.time);
-      for (const { obstacle } of contacts) {
-        if (!settleHit(obstacle, 1)) continue;
-        bullet.hitTargets.add(obstacle);
-        if (bullet.hitTargets.size >= (bullet.piercing ? 2 : 1)) { bullet.life = 0; break; }
-      }
-    }
+    for (const bullet of state.bullets) advanceProjectile(bullet, dt, state.obstacles, settleHit);
     for (const wave of state.shockwaves) {
       wave.age += dt;
       wave.radius = SHOCKWAVE.radius * Math.min(1, wave.age / SHOCKWAVE.duration);
@@ -138,23 +118,14 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       for (const resource of state.resources) {
         resource.life -= dt;
         if (resource.life <= 1e-10) continue;
-        const dx = state.ship.x - resource.x, dy = state.ship.y - resource.y;
-        const distance = Math.hypot(dx, dy);
-        resource.vx = 0; resource.vy = 0;
-        if (distance <= RESOURCE.attraction) {
-          const travel = Math.min(distance, RESOURCE.speed * dt);
-          if (distance) {
-            resource.vx = dx / distance * RESOURCE.speed; resource.vy = dy / distance * RESOURCE.speed;
-            moveSprite(resource, travel / RESOURCE.speed);
-          }
-          if (distance - travel <= resource.radius) {
-            resource.life = 0;
-            if (!collected) { state.pickupScore = 0; state.pickupResults = []; collected = true; }
-            const results = applyPickup(resource.kind, state);
-            for (const result of results) { state.pickupScore += result.points; state.score += result.points; }
-            state.pickupResults.push(...results);
-            state.pickupFeedback = RESOURCE.feedback;
-          }
+        advanceMotion(resource, dt, { target: state.ship });
+        if (Math.hypot(state.ship.x - resource.x, state.ship.y - resource.y) <= resource.radius) {
+          resource.life = 0;
+          if (!collected) { state.pickupScore = 0; state.pickupResults = []; collected = true; }
+          const results = applyPickup(resource.kind, state);
+          for (const result of results) { state.pickupScore += result.points; state.score += result.points; }
+          state.pickupResults.push(...results);
+          state.pickupFeedback = RESOURCE.feedback;
         }
       }
       state.resources = state.resources.filter(resource => resource.life > 1e-10);

@@ -34,3 +34,40 @@ export async function canvasColorPixels(page, color) {
     return count;
   }, color);
 }
+
+// Retain evidence from completed canvas frames before they are cleared. This
+// observes real pixels, so a short-lived marker need not survive a later input.
+export async function observeCanvasColors(page, colors) {
+  await page.addInitScript(colors => {
+    const expected = new Map(colors.map(rgb => ['#' + rgb.map(n => n.toString(16).padStart(2, '0')).join(''), rgb]));
+    window.canvasColorHistory = {};
+    const pending = new WeakMap();
+    const { stroke, clearRect } = CanvasRenderingContext2D.prototype;
+    CanvasRenderingContext2D.prototype.stroke = function (...args) {
+      const result = stroke.apply(this, args);
+      if (this.canvas.classList.contains('game-effects') && expected.has(this.strokeStyle) && !window.canvasColorHistory[this.strokeStyle]) {
+        if (!pending.has(this)) pending.set(this, new Set());
+        pending.get(this).add(this.strokeStyle);
+      }
+      return result;
+    };
+    CanvasRenderingContext2D.prototype.clearRect = function (...args) {
+      const candidates = pending.get(this);
+      if (candidates?.size) {
+        const pixels = this.getImageData(0, 0, this.canvas.width, this.canvas.height).data;
+        for (const color of candidates) {
+          const rgb = expected.get(color);
+          let count = 0;
+          for (let i = 0; i < pixels.length; i += 4) {
+            if (pixels[i] === rgb[0] && pixels[i + 1] === rgb[1] && pixels[i + 2] === rgb[2] && ++count > 10) {
+              window.canvasColorHistory[color] = true;
+              break;
+            }
+          }
+        }
+        candidates.clear();
+      }
+      return clearRect.apply(this, args);
+    };
+  }, colors);
+}

@@ -1,4 +1,5 @@
-import { greenResourcePixels, forwardFanLanes, canvasColorPixels } from '../helpers/game-canvas.js';
+import { waitForCanvasColor, moveUntilFeedback } from '../helpers/game-scenario.js';
+import { forwardFanLanes } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(150000);
@@ -19,18 +20,15 @@ test('independent fire-rate pickup shows transient feedback and preserves the fa
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-pickup')).toHaveText('');
   // With the arena extended to the navigation, approach the first drop before the second arrives.
-  await page.clock.runFor(5000);
-  const greenPixels = await greenResourcePixels(page);
-  expect(greenPixels).toBeGreaterThan(10);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
+  await waitForCanvasColor(page, [120, 244, 196]);
+  await moveUntilFeedback(page, 'ArrowUp', '飞船弹道数');
   await expect(page.locator('.game-pickup')).toContainText('飞船弹道数 +1 · 当前 3 条');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(180);
   const fan = await forwardFanLanes(page);
   expect(fan).toEqual(['center', 'left', 'right']);
-  await page.clock.runFor(2500);
-  expect(await canvasColorPixels(page, [111, 207, 255])).toBeGreaterThan(10);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(800); await page.keyboard.up('ArrowUp');
+  await waitForCanvasColor(page, [111, 207, 255]);
+  await moveUntilFeedback(page, 'ArrowUp', '飞船射速提升');
   await expect(page.locator('.game-pickup')).toContainText('飞船射速提升');
   await page.keyboard.press('p');
   await page.clock.runFor(3000);

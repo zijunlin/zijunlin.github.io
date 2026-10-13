@@ -1,3 +1,4 @@
+import { waitForCanvasColor } from '../helpers/game-scenario.js';
 import { canvasColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -23,8 +24,7 @@ for (const motion of ['reduce', 'no-preference']) {
       await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
       const brightPixels = () => canvasColorPixels(page, [255, 240, 122]);
       expect(await brightPixels()).toBe(0);
-      await page.clock.runFor(12000);
-      expect(await brightPixels()).toBeGreaterThan(10);
+      await waitForCanvasColor(page, [255, 240, 122], { timeout: 14000, step: 200 });
       if (evidence) await page.screenshot({ path: `${evidence}/${motion}-fast-obstacles.png` });
       await page.keyboard.press('p');
       const frozen = await page.locator('.game-effects').evaluate(canvas => canvas.toDataURL());

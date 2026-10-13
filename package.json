@@ -11,7 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "node --test tests/unit/*.test.mjs tests/integration/*.test.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "worktree": "node scripts/worktree.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

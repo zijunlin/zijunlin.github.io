@@ -1,11 +1,10 @@
-// Stable spawn geometry for scenarios that are not testing the fast variant.
-// Successful spawns draw type, side, position, heading and base speed, then
-// (from nine battle seconds) the independent fast-variant roll.
-export function ordinarySpawnRandom(values, seconds) {
-  let index = 0;
-  return () => {
-    const value = index === 5 ? .5 : values()[index];
-    index = (index + 1) % (seconds() >= 9 ? 6 : 5);
-    return value;
+// Read values by purpose so failed positions and the nine-second fast gate cannot
+// shift later samples. A scenario may change its geometry between advances.
+export function ordinarySpawnRandom(values) {
+  const slots = { type: 0, side: 1, position: 2, heading: 3, speed: 4 };
+  return purpose => {
+    if (purpose === 'fast') return .5;
+    if (!Object.hasOwn(slots, purpose)) throw new Error(`Unknown battle random purpose: ${purpose}`);
+    return values()[slots[purpose]];
   };
 }

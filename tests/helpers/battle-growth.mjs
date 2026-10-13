@@ -1,15 +1,14 @@
+import { ordinarySpawnRandom } from './ordinary-spawn-random.js';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 export const growthBounds = { left: 0, right: 800, top: 0, bottom: 300 };
 export const step = 1 / 120;
 export function growthRun() {
-  let index = 0, draws = 0, sequence = [.5, .5, .5, .5, .5];
-  const battle = createBattle({ bounds: growthBounds, reducedMotion: true, random: () => {
+  let draws = 0, sequence = [.5, .5, .5, .5, .5];
+  const battle = createBattle({ bounds: growthBounds, reducedMotion: true, random: ordinarySpawnRandom(() => {
     draws++;
-    const result = sequence[index++];
-    if (index === 5) index = 0;
-    return result;
-  } });
+    return sequence;
+  }) });
   return { battle, setRandom(value) { sequence = value; }, get draws() { return draws; } };
 }
 export function collectDrop(battle, drop) {

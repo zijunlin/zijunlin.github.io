@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 function game() {
   const sequence = [0, .6, .5, .5, 0];
-  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence, () => battle.state.seconds), reducedMotion: true });
+  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence), reducedMotion: true });
   return battle;
 }
 test('successful spawns offer the six-item independent resource cycle and a fresh battle restarts the cycle', () => {
@@ -40,7 +40,7 @@ test('collecting real shockwave drops refills to three without awarding pickup s
 });
 test('bullets and a shockwave jointly destroy a five-hit resource obstacle with one score and drop', () => {
   const sequence = [.9, .6, .5, .5, 0];
-  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence, () => battle.state.seconds), reducedMotion: true });
+  const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: ordinarySpawnRandom(() => sequence), reducedMotion: true });
   battle.advance(4.2);
   const target = battle.state.obstacles.find(o => o.resource);
   assert.equal(target.hp, 5);

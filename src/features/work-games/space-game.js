@@ -2,6 +2,7 @@ import css from './space-game.css?inline';
 import { mountGamePerformance } from './game-performance.js';
 import { createBattle } from './battle.js';
 import { mountBattleView } from './battle-view.js';
+import { describePickup } from './pickup-presentation.js';
 
 export function startGame({ presentation, leave, text }) {
   const panel = document.createElement('section'); panel.className = 'space-game'; panel.tabIndex = -1;
@@ -36,17 +37,7 @@ export function startGame({ presentation, leave, text }) {
     shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${text('空格释放 · 橙色圆环补充', 'Space to release · Orange rings refill')}`;
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
-    const pickupText = result => {
-      if (result.full) return result.points ? text('已满级，+50 分', 'At maximum, +50 points') : text('冲击波储备已满', 'Shockwave reserve full');
-      switch (result.kind) {
-        case 'trajectory': return text(`飞船弹道数 +1 · 当前 ${result.value} 条`, `Ship trajectories +1 · Now ${result.value}`);
-        case 'fireRate': return text('飞船射速提升', 'Ship fire rate increased');
-        case 'movement': return text('飞船移动速度提升', 'Ship movement speed increased');
-        case 'piercing': return text('穿透能力提升 · 可命中 2 个目标', 'Piercing increased · Hits 2 targets');
-        case 'shockwave': return text('冲击波 +1', 'Shockwave +1');
-      }
-    };
-    const valueFeedback = battle?.state.pickupFeedback > 0 ? battle.state.pickupResults.map(pickupText).join(' · ') : '';
+    const valueFeedback = battle?.state.pickupFeedback > 0 ? battle.state.pickupResults.map(result => describePickup(result, text)).join(' · ') : '';
     if (feedback.textContent !== valueFeedback) feedback.textContent = valueFeedback;
     feedback.hidden = !valueFeedback;
   }
