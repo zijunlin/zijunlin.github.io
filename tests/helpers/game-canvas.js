@@ -25,8 +25,8 @@ export async function forwardFanLanes(page) {
   });
 }
 
-// Read rendered pickup identity without exposing or mutating simulation state.
-export async function pickupColorPixels(page, color) {
+// Count rendered colors without exposing or mutating simulation state.
+export async function canvasColorPixels(page, color) {
   return page.locator('.game-effects').evaluate((canvas, rgb) => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let count = 0;
