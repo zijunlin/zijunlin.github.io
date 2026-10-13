@@ -83,3 +83,17 @@ test('reduced motion keeps a level uncompressed hull while keyboard movement rem
   expect(Math.abs(moved.drop)).toBeLessThan(1.5);
   expect(Math.abs(moved.width - level.width)).toBeLessThan(2);
 });
+
+test('slow relative dragging banks the rendered hull even after each target is reached', async ({ page }, testInfo) => {
+  await enter(page);
+  await page.mouse.move(400, 500);
+  await page.mouse.down();
+  const before = await page.locator('.game-ship').boundingBox();
+  for (let step = 1; step <= 20; step++) {
+    await page.mouse.move(400 + step, 500);
+    await page.clock.runFor(16);
+  }
+  expect((await page.locator('.game-ship').boundingBox()).x).toBeGreaterThan(before.x + 15);
+  expect((await wings(page, testInfo, 'slow-drag')).drop).toBeGreaterThan(1);
+  await page.mouse.up();
+});
