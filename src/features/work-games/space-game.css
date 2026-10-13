@@ -13,3 +13,16 @@
 .game-satellite, .game-ship { will-change: transform; }
 
 .space-game:focus { outline: none; }
+
+.game-visuals { position:absolute; inset:0; transform-origin:0 0; pointer-events:none; }
+.game-touch { position:absolute; inset:0; pointer-events:auto; touch-action:none; user-select:none; }
+.game-controls { position:absolute; inset:0; pointer-events:none; }
+.game-pause { position:absolute; top:var(--game-hud-top); right:max(12px, env(safe-area-inset-right)); min-height:44px; }
+.game-wave { position:absolute; right:max(12px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); min-height:48px; touch-action:manipulation; }
+.space-game button:disabled { opacity:.45; }
+@media (max-width: 799px), (max-height: 599px) {
+  .game-hud { left:max(12px, env(safe-area-inset-left)); right:88px; font-size:11px; }
+  .game-hud p:first-child { font-size:15px; }
+  .game-modal { box-sizing:border-box; max-width:calc(100vw - 24px); max-height:calc(100dvh - 24px); overflow:auto; padding:20px; }
+  .game-modal button { min-height:44px; }
+}

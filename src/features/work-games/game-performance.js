@@ -17,8 +17,8 @@ function mountArtwork(layer, captures, reduced) {
   ship.setAttribute('viewBox', '-24 -30 48 72');
   ship.innerHTML = '<path fill="#a7e9ed" d="M0-26 19 19 7 13 0 19-7 13-19 19Z"/><path fill="#163a49" d="M0-13 6 9 0 5-6 9Z"/><path fill="#e5ffff" d="M-2-6H2V3H-2Z"/><path fill="#8de9f080" d="M-5 18 0 34 5 18Z"/>';
   layer.append(ship);
-  let appearanceTime = -1;
-  function render(time, orbitTime, bounds, center) {
+  let appearanceTime = -1, bank = 0;
+  function render(time, orbitTime, bounds, center, dt = 0) {
     const appearanceChanged = time !== appearanceTime;
     const down = ease((time - 1.8) / 1.2);
     const cx = (bounds.left + bounds.right) / 2;
@@ -39,7 +39,9 @@ function mountArtwork(layer, captures, reduced) {
       element.style.transform = `translate(${x - capture.size / 2}px, ${y - capture.size / 2}px) scale(${blend(1, .65, ease(time / 1.7))})`;
       if (appearanceChanged) capture.setEnvelopeScale(blend(1, .45, ease(time / 1.7)));
     });
-    ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px)`;
+    const desired = reduced ? 0 : Math.max(-1, Math.min(1, (center?.vx ?? 0) / (center?.movementSpeed || 390)));
+    bank += (desired - bank) * (1 - Math.exp(-dt * 14));
+    ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px) perspective(160px) rotateY(${bank * 28}deg) rotateZ(${bank * 10}deg)`;
     if (appearanceChanged) ship.style.opacity = String(ease((time - 1.25) / .55));
     appearanceTime = time;
   }
@@ -83,7 +85,7 @@ export function mountGamePerformance({ layer, presentation, reduced }) {
           elapsed = 3;
           formation = { seconds: battle.seconds, ship: { ...battle.ship } };
         } else elapsed = Math.min(3, elapsed + dt);
-        artwork.render(elapsed, formation?.seconds ?? 0, bounds, formation?.ship);
+        artwork.render(elapsed, formation?.seconds ?? 0, bounds, formation?.ship, dt);
         if (elapsed === 3) phase = 'ready';
       }
       return phase;

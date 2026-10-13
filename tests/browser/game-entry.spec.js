@@ -58,13 +58,13 @@ test('a cancelled delayed import cannot take over the home page', async ({ page 
   await expect(page.locator('.celestial-gate').first()).toBeVisible();
 });
 
-test('mobile screens never automatically enter the game', async ({ page }) => {
+test('mobile screens automatically enter the game and preserve navigation', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
   await expect(page.locator('#world-entry')).toBeVisible();
   await page.bringToFront();
-  await page.clock.runFor(20000);
-  await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
+  await page.clock.runFor(10100);
+  await expect(page.locator('.space-game')).toBeVisible();
   await page.locator('nav a[href="#about"]').click();
   await expect(page.locator('#about-panel-title')).toBeVisible();
 });
@@ -143,7 +143,7 @@ test('a reload starts a new visit with a fresh automatic entry', async ({ page }
   await expect(page.getByRole('dialog')).toHaveCount(0);
 });
 
-test('game shortcut ignores typing, other modifiers, reading and small windows', async ({ page }) => {
+test('game shortcut ignores typing, other modifiers, reading and unusably small windows', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('#world-entry')).toBeVisible();
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
@@ -161,7 +161,7 @@ test('game shortcut ignores typing, other modifiers, reading and small windows',
   await page.keyboard.press('Shift+G');
   await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
   await page.locator('nav a[href="#"]').click();
-  await page.setViewportSize({ width: 700, height: 500 });
+  await page.setViewportSize({ width: 240, height: 240 });
   await page.keyboard.press('Shift+G');
   await expect(page.locator('[data-game-dialog], .space-game')).toHaveCount(0);
 });

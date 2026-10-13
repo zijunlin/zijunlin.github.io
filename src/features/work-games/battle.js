@@ -80,9 +80,16 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const magnitude = Math.max(1, Math.hypot(input.x, input.y));
     state.ship.vx = input.x / magnitude * state.ship.movementSpeed;
     state.ship.vy = input.y / magnitude * state.ship.movementSpeed;
+    if (input.target) {
+      const dx = input.target.x - state.ship.x, dy = input.target.y - state.ship.y;
+      const factor = Math.min(1 / dt, state.ship.movementSpeed / (Math.hypot(dx, dy) || 1));
+      state.ship.vx = dx * factor; state.ship.vy = dy * factor;
+    }
     advanceMotion(state.ship, dt);
     state.ship.x = constrain(state.ship.x, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
     state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
+    state.ship.vx = (state.ship.x - shipBefore.x) / dt;
+    state.ship.vy = (state.ship.y - shipBefore.y) / dt;
     shotWait -= dt;
     // Upgrades preserve the pending wait; the next volley starts the new cadence.
     if (shotWait <= 0) { fireForward(); shotWait += state.fireInterval; }

@@ -1,18 +1,19 @@
 import { drawPickupMarker } from './pickup-presentation.js';
 // Canvas owns transient combat effects; the captured satellites remain DOM artwork.
-export function mountBattleView(layer) {
+export function mountBattleView(layer, scale = 1) {
   const canvas = document.createElement('canvas'); canvas.className = 'game-effects'; canvas.setAttribute('aria-hidden', 'true');
   layer.prepend(canvas);
   const context = canvas.getContext('2d');
   function resize() {
     const ratio = Math.min(devicePixelRatio || 1, 2);
-    canvas.width = innerWidth * ratio; canvas.height = innerHeight * ratio;
+    canvas.width = innerWidth / scale * ratio; canvas.height = innerHeight / scale * ratio;
+    canvas.style.width = `${innerWidth / scale}px`; canvas.style.height = `${innerHeight / scale}px`;
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
   }
   resize();
   function draw(state, bounds) {
     if (!context) return;
-    context.clearRect(0, 0, innerWidth, innerHeight);
+    context.clearRect(0, 0, innerWidth / scale, innerHeight / scale);
     context.save(); context.beginPath(); context.rect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top); context.clip();
     for (const wave of state.shockwaves) {
       context.strokeStyle = '#9be8ff'; context.lineWidth = 3;

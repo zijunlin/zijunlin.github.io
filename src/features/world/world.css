@@ -175,3 +175,5 @@
 @media (pointer: fine) and (hover: hover) and (min-width: 800px) and (min-height: 600px) {
   .world-game-shortcut { display:inline; }
 }
+
+.celestial-gate { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }

@@ -164,11 +164,38 @@ export async function mountWorldView(container, state) {
     } else if (!frame) frame = requestAnimationFrame(animate);
   }
   links.forEach(link => {
-    link.addEventListener('pointerenter', () => { hovered = true; sync(); }, { signal });
+    let gesture, suppressClick = false, feedback;
+    link.addEventListener('pointerdown', event => {
+      if (!event.isPrimary || event.button !== 0) return;
+      suppressClick = false;
+      gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      link.setPointerCapture(event.pointerId);
+      if (!reducedMotion.matches) {
+        feedback?.cancel();
+        feedback = link.querySelector('.orb-art').animate([
+          { translate: '0 0' }, { translate: '-2px 0' },
+          { translate: '2px 0' }, { translate: '0 0' },
+        ], { duration: 220, easing: 'ease-out' });
+      }
+    }, { signal });
+    link.addEventListener('pointermove', event => {
+      if (gesture?.id === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) suppressClick = true;
+    }, { signal });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) link.addEventListener(type, event => {
+      if (gesture?.id !== event.pointerId) return;
+      if (type === 'pointercancel') suppressClick = true;
+      gesture = null;
+      if (event.pointerType !== 'mouse' && document.activeElement === link) link.blur();
+    }, { signal });
+    link.addEventListener('click', event => {
+      if (suppressClick && event.detail !== 0) { event.preventDefault(); event.stopImmediatePropagation(); }
+      suppressClick = false;
+    }, { signal, capture: true });
+    link.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') { hovered = true; sync(); } }, { signal });
     link.addEventListener('pointerleave', () => { hovered = false; sync(); }, { signal });
   });
-  stage.addEventListener('focusin', () => { focused = true; sync(); }, { signal });
-  stage.addEventListener('focusout', event => { focused = stage.contains(event.relatedTarget); sync(); }, { signal });
+  stage.addEventListener('focusin', () => { focused = links.some(link => link.matches(':focus-visible')); sync(); }, { signal });
+  stage.addEventListener('focusout', event => { focused = Boolean(event.relatedTarget?.matches(':focus-visible') && stage.contains(event.relatedTarget)); sync(); }, { signal });
   reducedMotion.addEventListener('change', sync, { signal });
   window.addEventListener('hashchange', sync, { signal });
   document.addEventListener('visibilitychange', sync, { signal });

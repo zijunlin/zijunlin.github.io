@@ -3,13 +3,16 @@ import gameUrl from 'virtual:space-game-url';
 
 // This module is the entire eager game boundary. The game owns no resources until eligible automatic entry.
 export function mountGameEntry(scene, getWorld) {
-  const fine = matchMedia('(pointer: fine) and (hover: hover)');
+  const pressed = new Set();
+  window.addEventListener('pointerdown', event => pressed.add(event.pointerId), { capture: true });
+  for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, event => pressed.delete(event.pointerId), { capture: true });
+  window.addEventListener('blur', () => pressed.clear());
   let elapsed = 0, last = performance.now(), consumed = false, generation = 0;
   let dialog, session, returnFocus, loadingNotice, loadingTimer, loadingLanguage;
   let loading = false;
   const text = (zh, en) => document.documentElement.lang === 'en' ? en : zh;
   const eligible = () => !location.hash.replace('#', '') && !document.hidden && document.hasFocus()
-    && fine.matches && innerWidth >= 800 && innerHeight >= 600 && !scene.hidden
+    && innerWidth >= 280 && innerHeight >= 280 && !scene.hidden
     && !document.querySelector('dialog[open]:not([data-game-dialog]), .reading-panel:not([hidden])');
   function closeDialog() { dialog?.close(); dialog?.remove(); dialog = null; }
   function clearLoading() {
@@ -88,7 +91,7 @@ export function mountGameEntry(scene, getWorld) {
     const delta = Math.min(now - last, 250); last = now;
     if (consumed || !eligible() || document.querySelector('dialog[open]')) return;
     elapsed += delta;
-    if (elapsed < 10000) return;
+    if (elapsed < 10000 || pressed.size) return;
     enter();
   }, 100);
   // Capture navigation before site content handlers restore their own focus.
