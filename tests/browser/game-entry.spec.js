@@ -206,3 +206,61 @@ test('Shift+G hint starts opening directly and works again after exiting', async
   await page.keyboard.press('Shift+G');
   await expect(page.getByText('正在集结')).toBeVisible();
 });
+
+test('a delayed game import waits for an orb gesture and preserves reading priority', async ({ page }) => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  let requested = false;
+  await page.route('**/assets/space-game-*.js*', async route => { requested = true; await pending; await route.continue(); });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.runFor(10100);
+  await expect.poll(() => requested).toBe(true);
+  const orb = page.locator('.celestial-gate[href="#about"]');
+  const box = await orb.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  const imported = page.waitForResponse(response => /space-game-.*\.js/.test(response.url()));
+  release();
+  await (await imported).finished();
+  await page.clock.runFor(600);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.mouse.up();
+  await expect(page.locator('#about-panel-title')).toBeVisible();
+  await page.clock.runFor(600);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.locator('nav a[href="#"]').click();
+  await page.clock.runFor(300);
+  await expect(page.locator('.space-game')).toBeVisible();
+});
+
+test('preparing can be cancelled with a touch-accessible action', async ({ page }) => {
+  let release;
+  const pending = new Promise(resolve => { release = resolve; });
+  await page.route('**/assets/space-game-*.js*', async route => { await pending; await route.continue(); });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.runFor(10500);
+  await page.getByRole('button', { name: '取消游戏', exact: true }).click();
+  release();
+  await page.clock.runFor(11000);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await expect(page.getByRole('status')).toHaveCount(0);
+});
+
+test('holding a mouse drag across the deadline waits until release without opening content', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.runFor(9000);
+  const box = await page.locator('.celestial-gate[href="#about"]').boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2 + 25, box.y + box.height / 2, { steps: 5 });
+  await page.clock.runFor(1200);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.mouse.up();
+  await page.clock.runFor(300);
+  await expect(page).not.toHaveURL(/#about$/);
+  await expect(page.locator('.space-game')).toBeVisible();
+});
