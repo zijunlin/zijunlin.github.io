@@ -165,6 +165,8 @@ export async function mountWorldView(container, state) {
   }
   links.forEach(link => {
     let gesture, suppressClick = false, feedback;
+    // Native link dragging cancels pointer capture before the visitor releases.
+    link.addEventListener('dragstart', event => event.preventDefault(), { signal });
     link.addEventListener('pointerdown', event => {
       if (!event.isPrimary || event.button !== 0) return;
       suppressClick = false;
