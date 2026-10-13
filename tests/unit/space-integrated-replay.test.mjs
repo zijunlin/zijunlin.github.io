@@ -1,3 +1,4 @@
+import { ordinarySpawnRandom } from '../helpers/ordinary-spawn-random.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
@@ -7,7 +8,7 @@ const bounds = { left: 0, right: 800, top: 0, bottom: 300 };
 const snapshot = battle => JSON.parse(JSON.stringify(battle.state));
 function setup() {
   let sequence = [0, .6, .5, .5, 0], draws = 0;
-  const battle = createBattle({ bounds, random: () => sequence[draws++ % 5], reducedMotion: true });
+  const battle = createBattle({ bounds, random: ordinarySpawnRandom(() => { draws++; return sequence; }, () => battle.state.seconds), reducedMotion: true });
   return { battle, setRandom: value => { sequence = value; }, get draws() { return draws; } };
 }
 function apply(run, event) {

@@ -1,10 +1,10 @@
+import { ordinarySpawnRandom } from '../helpers/ordinary-spawn-random.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 const bounds = { left: 0, right: 800, top: 0, bottom: 300 };
 function grow() {
-  let i = 0;
-  const battle = createBattle({ bounds, reducedMotion: true, random: () => [0,.6,.5,.5,0][i++ % 5] });
+  const battle = createBattle({ bounds, reducedMotion: true, random: ordinarySpawnRandom(() => [0,.6,.5,.5,0], () => battle.state.seconds) });
   const levels = [0];
   while (battle.state.weaponLevel < 4 && battle.state.seconds < 20 && !battle.state.ended) {
     battle.advance(1 / 120);
