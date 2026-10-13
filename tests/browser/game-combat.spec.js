@@ -63,6 +63,8 @@ test('switching language preserves a nonzero combat score', async ({ page }) => 
 });
 
 test('ship reaches the navigation and viewport edges and travels beneath the HUD', async ({ page }) => {
+  // This route renders 15 seconds of software-GPU combat through the public clock.
+  test.setTimeout(150000);
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   const move = async (key, duration) => {
     await page.keyboard.down(key); await page.clock.runFor(duration); await page.keyboard.up(key);
