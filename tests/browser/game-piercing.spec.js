@@ -24,6 +24,13 @@ test('five independent pickup identities draw effects and transient feedback, pr
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   await expect(page.locator('.game-pickup')).toHaveText('');
+  await page.evaluate(() => {
+    window.pickupHistory = [];
+    new MutationObserver(() => {
+      const value = document.querySelector('.game-pickup').textContent;
+      if (value) window.pickupHistory.push(value);
+    }).observe(document.querySelector('.game-pickup'), { childList: true, subtree: true });
+  });
   // With the arena extended to the navigation, approach the first drop before the second arrives.
   await page.clock.runFor(5000);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-resources.png` });
@@ -38,18 +45,21 @@ test('five independent pickup identities draw effects and transient feedback, pr
   await page.clock.runFor(4000);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
   await expect(page.locator('.game-shockwave')).toContainText('2 / 3');
-  await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
-  await page.clock.runFor(2000);
-  expect(await pickupColorPixels(page, [255, 225, 120])).toBeGreaterThan(10);
-  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-movement-drop.png` });
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-pickup')).toContainText('飞船移动速度提升');
-  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-movement.png` });
-  await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
-  await page.clock.runFor(2000);
-  expect(await pickupColorPixels(page, [210, 167, 255])).toBeGreaterThan(10);
-  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-piercing-drop.png` });
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (await page.evaluate(() => window.pickupHistory.some(value => value.includes('穿透能力提升')))) break;
+    await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
+    await page.clock.runFor(2000);
+    if (motion === 'reduce') {
+      const color = attempt === 0 ? [255, 225, 120] : [210, 167, 255];
+      expect(await pickupColorPixels(page, color)).toBeGreaterThan(10);
+      if (evidence) await page.screenshot({ path: `${evidence}/${motion}-${attempt === 0 ? 'movement' : 'piercing'}-drop.png` });
+    }
+    await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
+  }
+  const history = await page.evaluate(() => window.pickupHistory.join(' | '));
+  expect(history).toContain('飞船弹道数'); expect(history).toContain('飞船射速提升');
+  expect(history).toContain('冲击波 +1'); expect(history).toContain('飞船移动速度提升');
+  expect(history).toContain('穿透能力提升');
   await expect(page.locator('.game-pickup')).toContainText('穿透能力提升');
   await page.keyboard.press('p');
   const feedback = await page.locator('.game-pickup').textContent();

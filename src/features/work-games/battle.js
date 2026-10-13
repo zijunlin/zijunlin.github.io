@@ -30,9 +30,11 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     }
     if (!valid) return;
     const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random() - .5) * .9;
-    const velocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
+    const baseVelocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
+    const fast = state.seconds >= 9 && random() < .15;
+    const velocity = baseVelocity * (fast ? 2 : 1);
     generated++;
-    state.obstacles.push({ ...type, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? dropCycle[(generated / 4 - 1) % dropCycle.length] : null, warning: .65, flash: 0 });
+    state.obstacles.push({ ...type, fast, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? dropCycle[(generated / 4 - 1) % dropCycle.length] : null, warning: .65, flash: 0 });
   }
   function shot(x, y, angle, piercing = false) {
     state.bullets.push({ ...createSprite({ x, y, radius: 2, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520 }), life: 1.9, piercing, hitTargets: new Set() });

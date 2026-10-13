@@ -1,3 +1,4 @@
+import { ordinarySpawnRandom } from '../helpers/ordinary-spawn-random.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
@@ -7,7 +8,7 @@ const bounds = { left: 0, right: 800, top: 0, bottom: 300 };
 const wide = { left: -3000, right: 3000, top: -3000, bottom: 3000 };
 function scenario(waveAt = null, release = true) {
   let draws = 0, sequence = [0, .6, .5, .5, 0];
-  const battle = createBattle({ bounds, random: () => sequence[draws++ % 5], reducedMotion: true });
+  const battle = createBattle({ bounds, random: ordinarySpawnRandom(() => { draws++; return sequence; }, () => battle.state.seconds), reducedMotion: true });
   function place(x, y) {
     battle.resize({ left: x - 13.2, right: x + 13.2, top: y - 16.5, bottom: y + 23.1 });
     battle.resize(wide);

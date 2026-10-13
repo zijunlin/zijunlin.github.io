@@ -70,13 +70,24 @@ export function mountBattleView(layer) {
       if (obstacle.warning > 0) {
         const x = Math.max(bounds.left + 10, Math.min(bounds.right - 10, obstacle.x));
         const y = Math.max(bounds.top + 10, Math.min(bounds.bottom - 10, obstacle.y));
-        context.strokeStyle = '#f4c880'; context.lineWidth = 2;
+        context.strokeStyle = obstacle.fast ? '#fff07a' : '#f4c880'; context.lineWidth = obstacle.fast ? 3 : 2;
         context.beginPath(); context.arc(x, y, 7 + (1 - obstacle.warning / .65) * 8, 0, Math.PI * 2); context.stroke();
         if (obstacle.resource) resourceMarker(obstacle.resource, x, y, 6);
         continue;
       }
+      if (obstacle.fast) {
+        // A fixed short wake and bright contour remain legible with reduced motion.
+        const speed = Math.hypot(obstacle.vx, obstacle.vy);
+        const dx = speed ? obstacle.vx / speed : 0, dy = speed ? obstacle.vy / speed : 0;
+        context.strokeStyle = '#fff07a'; context.lineWidth = 2;
+        for (const side of [-1, 1]) {
+          const x = obstacle.x - dx * obstacle.radius * .6 - dy * side * obstacle.radius * .45;
+          const y = obstacle.y - dy * obstacle.radius * .6 + dx * side * obstacle.radius * .45;
+          context.beginPath(); context.moveTo(x, y); context.lineTo(x - dx * 18, y - dy * 18); context.stroke();
+        }
+      }
       context.fillStyle = obstacle.flash ? '#fff5d7' : '#765d59aa';
-      context.strokeStyle = '#dfa796'; context.lineWidth = 1.5;
+      context.strokeStyle = obstacle.fast ? '#fff07a' : '#dfa796'; context.lineWidth = obstacle.fast ? 3 : 1.5;
       context.beginPath();
       for (let i = 0; i < 9; i++) {
         const angle = i * Math.PI * 2 / 9;
