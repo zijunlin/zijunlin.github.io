@@ -6,7 +6,7 @@ for (const motion of ['reduce', 'no-preference']) {
 test.describe(motion, () => {
 test.use({ reducedMotion: motion });
 test.setTimeout(420000);
-test('complete weapon growth draws piercing bolts, shows maximum level and preserves upgrades through pause and replay', async ({ page }) => {
+test('five independent pickup identities draw effects and transient feedback, preserve pause and clear on replay', async ({ page }) => {
   page.setDefaultTimeout(15000);
   await page.addInitScript(() => {
     Math.random = () => .5;
@@ -22,24 +22,38 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await expect(page.getByText('正在集结')).toBeVisible();
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
-  await expect(page.locator('.game-weapon')).toHaveText('武器等级: 0');
+  await expect(page.locator('.game-pickup')).toHaveText('');
   // With the arena extended to the navigation, approach the first drop before the second arrives.
   await page.clock.runFor(5000);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-resources.png` });
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 1');
+  await expect(page.locator('.game-pickup')).toContainText('飞船弹道数');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(180);
   await page.clock.runFor(2500);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(800); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 2');
+  await expect(page.locator('.game-pickup')).toContainText('飞船射速提升');
   await page.keyboard.down('ArrowDown'); await page.clock.runFor(1000); await page.keyboard.up('ArrowDown');
   await page.clock.runFor(4000);
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 3');
-  await page.clock.runFor(200); // The pickup keeps the pending firing wait.
-  // Move away from the top edge so a newly fired bolt remains on canvas.
-  await page.keyboard.down('ArrowDown'); await page.clock.runFor(300);
+  await expect(page.locator('.game-shockwave')).toContainText('2 / 3');
+  await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
+  await page.clock.runFor(2000);
+  await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
+  await expect(page.locator('.game-pickup')).toContainText('飞船移动速度提升');
+  if (evidence) await page.screenshot({ path: `${evidence}/${motion}-movement.png` });
+  await page.keyboard.down('ArrowDown'); await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
+  await page.clock.runFor(2000);
+  await page.keyboard.down('ArrowUp'); await page.clock.runFor(900); await page.keyboard.up('ArrowUp');
+  await expect(page.locator('.game-pickup')).toContainText('穿透能力提升');
+  await page.keyboard.press('p');
+  const feedback = await page.locator('.game-pickup').textContent();
+  await page.clock.runFor(3000);
+  await expect(page.locator('.game-pickup')).toHaveText(feedback);
+  await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+  await page.getByRole('button', { name: 'English', exact: true }).click();
+  await expect(page.locator('.game-pickup')).toContainText('Piercing increased');
+  await page.keyboard.down('ArrowDown'); await page.clock.runFor(300); await page.keyboard.up('ArrowDown');
   const piercingPixels = await page.locator('.game-effects').evaluate(canvas => {
     const pixels = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
     let count = 0;
@@ -48,24 +62,10 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   });
   expect(piercingPixels).toBeGreaterThan(10);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-piercing.png` });
-  await expect(page.locator('.game-weapon')).toContainText('穿透');
-  await page.clock.runFor(700); await page.keyboard.up('ArrowDown');
-  await page.clock.runFor(4000);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(1200); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 4 · 满级');
-  await page.keyboard.down('ArrowDown'); await page.clock.runFor(1000); await page.keyboard.up('ArrowDown');
-  await page.clock.runFor(4000);
-  await page.keyboard.down('ArrowUp'); await page.clock.runFor(1200); await page.keyboard.up('ArrowUp');
-  await expect(page.locator('.game-weapon')).toContainText(/\+\d+ 分/);
-  const gain = (await page.locator('.game-weapon').textContent()).match(/\+(\d+) 分/)[1];
-  await page.keyboard.press('p');
-  await page.clock.runFor(3000);
-  await expect(page.locator('.game-weapon')).toContainText('武器等级: 4 · 满级');
-  await page.getByRole('button', { name: '继续游戏', exact: true }).click();
-  await page.getByRole('button', { name: 'English', exact: true }).click();
-  await expect(page.locator('.game-weapon')).toContainText('Maximum');
-  await expect(page.locator('.game-weapon')).toContainText(`+${gain} points`);
-  await expect(page.locator('.game-weapon')).toContainText('Piercing');
+  await page.clock.runFor(1400);
+  await expect(page.locator('.game-pickup')).toHaveText('');
+  await expect(page.locator('.game-weapon')).toHaveCount(0);
+  await expect(page.locator('.game-hud')).not.toContainText(/Weapon level|Ship trajectories|Piercing increased|movement speed/);
   await page.setViewportSize({ width: 700, height: 500 });
   await expect(page.getByRole('dialog', { name: 'Game paused' })).toBeVisible();
   const reserve = await page.locator('.game-shockwave').textContent();
@@ -96,7 +96,7 @@ test('complete weapon growth draws piercing bolts, shows maximum level and prese
   await page.keyboard.up('Space');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Play again', exact: true }).click();
-  await expect(page.locator('.game-weapon')).toHaveText('Weapon level: 0');
+  await expect(page.locator('.game-pickup')).toHaveText('');
   await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Return home', exact: true }).click();

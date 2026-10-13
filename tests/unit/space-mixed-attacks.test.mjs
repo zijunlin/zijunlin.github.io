@@ -12,18 +12,18 @@ function scenario(waveAt = null, release = true) {
     battle.resize({ left: x - 13.2, right: x + 13.2, top: y - 16.5, bottom: y + 23.1 });
     battle.resize(wide);
   }
-  while (battle.state.weaponLevel < 3 && battle.state.seconds < 25) {
+  while (!battle.state.piercing && battle.state.seconds < 35) {
     if (battle.state.resources.length) {
       battle.resize({ ...bounds, top: -100, bottom: battle.state.resources[0].y + 23.1 });
       battle.advance(dt);
       battle.resize({ ...bounds, top: 238.5, bottom: 500 }); battle.resize(bounds);
     } else battle.advance(dt);
   }
-  assert.equal(battle.state.weaponLevel, 3);
+  assert.equal(battle.state.piercing, true);
   place(2000, 0);
   let target, spawned = 0;
   // Keep three ordinary targets away from the shot path; the fourth naturally carries a resource.
-  while (!target && battle.state.seconds < 30) {
+  while (!target && battle.state.seconds < 40) {
     const y = spawned < 3 ? 600 : 0;
     battle.resize({ left: 30, right: 2100, top: -100, bottom: 700 });
     sequence = [.9, 0, (y + 100) / 800, .5 - Math.atan2(-y, 2000) / .9, 0];
@@ -68,12 +68,12 @@ function scenario(waveAt = null, release = true) {
       assert.equal(battle.state.resources.length - resources, 1);
       assert.equal(battle.state.shockwaveCharges, charges - 1);
       assert.equal(battle.state.ended, false, 'the mixed attack kill wins the ship collision');
-      const level = battle.state.weaponLevel;
+      const chargesAfter = battle.state.shockwaveCharges;
       battle.advance(dt * 3);
       assert.equal(battle.state.score - score, 60, 'no duplicate kill score');
       // Faster attraction now collects this nearby drop within three steps.
       assert.equal(battle.state.resources.length - resources, 0);
-      assert.equal(battle.state.weaponLevel, level + 1, 'one drop produces one upgrade');
+      assert.equal(battle.state.shockwaveCharges, chargesAfter + 1, 'one drop produces one refill');
     }
     return changes;
   }
