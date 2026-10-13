@@ -1,11 +1,12 @@
+import { createSprite, moveSprite } from './sprites.js';
 import { difficultyAt, hitObstacle, intersectsSweep, sweepContact } from './rules.js';
 const types = [
-  { radius: 12, hp: 1, points: 10, speed: 1.45 },
-  { radius: 21, hp: 3, points: 30, speed: 1 },
-  { radius: 30, hp: 5, points: 60, speed: .7 },
+  { radius: 12, hp: 1, points: 10, sizeSpeedMultiplier: 1.45 },
+  { radius: 21, hp: 3, points: 30, sizeSpeedMultiplier: 1 },
+  { radius: 30, hp: 5, points: 60, sizeSpeedMultiplier: .7 },
 ];
-// First-pass tuning: 110px attraction, 260px/s pull, 16px collection, ±6° fan; max-level weapon drops award 50 points.
-const RESOURCE = { lifetime: 8, attraction: 110, speed: 260, pickup: 16, feedback: 1.2, edgeInset: 12, maxWeaponPoints: 50 };
+// First-pass tuning: 110px attraction, 720px/s pull, 16px collection, ±6° fan; max-level weapon drops award 50 points.
+const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12, maxWeaponPoints: 50 };
 const FAN_ANGLE = Math.PI / 30;
 // Visible ship viewport, excluding the orbiting satellites.
 const shipInsets = { left: 13.2, right: 13.2, top: 16.5, bottom: 23.1 };
@@ -15,7 +16,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, pickupScore: 0, shockwaveCharges: 1, shockwaves: [] };
+  const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: 390 }, bullets: [], obstacles: [], particles: [], resources: [], weaponLevel: 0, pickupFeedback: 0, pickupKind: null, pickupScore: 0, shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
@@ -29,12 +30,12 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     }
     if (!valid) return;
     const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random() - .5) * .9;
-    const velocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.speed;
+    const velocity = (32 + random() * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
     generated++;
-    state.obstacles.push({ ...type, resource: generated % 4 === 0 ? (generated % 12 === 0 ? 'shockwave' : 'weapon') : null, x, y, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity, warning: .65, flash: 0 });
+    state.obstacles.push({ ...type, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? (generated % 12 === 0 ? 'shockwave' : 'weapon') : null, warning: .65, flash: 0 });
   }
   function shot(x, y, angle, piercing = false) {
-    state.bullets.push({ x, y, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520, life: 1.9, piercing, hitTargets: new Set() });
+    state.bullets.push({ ...createSprite({ x, y, radius: 2, vx: Math.cos(angle) * 520, vy: Math.sin(angle) * 520 }), life: 1.9, piercing, hitTargets: new Set() });
   }
   function fireForward() {
     const { x, y } = state.ship;
@@ -58,7 +59,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const points = hitObstacle(obstacle, damage);
     state.score += points;
     if (obstacle.hp === 0) {
-      if (obstacle.resource) state.resources.push({ x: constrain(obstacle.x, bounds.left + RESOURCE.edgeInset, bounds.right - RESOURCE.edgeInset), y: constrain(obstacle.y, bounds.top + RESOURCE.edgeInset, bounds.bottom - RESOURCE.edgeInset), kind: obstacle.resource, life: RESOURCE.lifetime });
+      if (obstacle.resource) state.resources.push({ ...createSprite({ x: constrain(obstacle.x, bounds.left + RESOURCE.edgeInset, bounds.right - RESOURCE.edgeInset), y: constrain(obstacle.y, bounds.top + RESOURCE.edgeInset, bounds.bottom - RESOURCE.edgeInset), radius: RESOURCE.pickup }), kind: obstacle.resource, life: RESOURCE.lifetime });
       for (let i = 0; i < 8; i++) {
         const angle = i * Math.PI / 4;
         state.particles.push({ x: obstacle.x, y: obstacle.y, vx: Math.cos(angle) * 80, vy: Math.sin(angle) * 80, life: .45 });
@@ -70,13 +71,16 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     state.seconds += dt;
     if (shockwavePending && state.shockwaveCharges > 0) {
       state.shockwaveCharges--;
-      state.shockwaves.push({ ...state.ship, radius: 0, age: 0, hitTargets: new Set() });
+      state.shockwaves.push({ x: state.ship.x, y: state.ship.y, radius: 0, age: 0, hitTargets: new Set() });
     }
     shockwavePending = false;
     const shipBefore = { ...state.ship };
     const magnitude = Math.max(1, Math.hypot(input.x, input.y));
-    state.ship.x = constrain(state.ship.x + input.x / magnitude * 300 * dt, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
-    state.ship.y = constrain(state.ship.y + input.y / magnitude * 300 * dt, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
+    state.ship.vx = input.x / magnitude * state.ship.movementSpeed;
+    state.ship.vy = input.y / magnitude * state.ship.movementSpeed;
+    moveSprite(state.ship, dt);
+    state.ship.x = constrain(state.ship.x, bounds.left + shipInsets.left, bounds.right - shipInsets.right);
+    state.ship.y = constrain(state.ship.y, bounds.top + shipInsets.top, bounds.bottom - shipInsets.bottom);
     shotWait -= dt;
     // Upgrades preserve the pending wait; the next volley starts the new cadence.
     if (shotWait <= 0) { fireForward(); shotWait += state.weaponLevel >= 4 ? .11 : state.weaponLevel >= 2 ? .13 : .16; }
@@ -88,19 +92,19 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
       obstacle.before = { x: obstacle.x, y: obstacle.y };
       obstacle.flash = Math.max(0, obstacle.flash - dt);
       if (obstacle.warning > 0) { obstacle.warning = Math.max(0, obstacle.warning - dt); continue; }
-      obstacle.x += obstacle.vx * dt; obstacle.y += obstacle.vy * dt;
+      moveSprite(obstacle, dt);
     }
     for (const bullet of state.bullets) {
       const before = { x: bullet.x, y: bullet.y };
       const liveFor = Math.min(dt, bullet.life);
-      bullet.x += bullet.vx * liveFor; bullet.y += bullet.vy * liveFor; bullet.life -= dt;
+      moveSprite(bullet, liveFor); bullet.life -= dt;
       if (liveFor <= 0) continue;
       const contacts = [];
       const fraction = liveFor / dt;
       for (const obstacle of state.obstacles) {
         if (obstacle.warning > 0 || obstacle.hp <= 0 || bullet.hitTargets.has(obstacle)) continue;
         const obstacleEnd = { x: obstacle.before.x + (obstacle.x - obstacle.before.x) * fraction, y: obstacle.before.y + (obstacle.y - obstacle.before.y) * fraction };
-        const time = sweepContact(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + 2);
+        const time = sweepContact(before, bullet, obstacle.before, obstacleEnd, obstacle.radius + bullet.radius);
         if (time !== null) contacts.push({ obstacle, time });
       }
       contacts.sort((a, b) => a.time - b.time);
@@ -121,7 +125,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     state.shockwaves = state.shockwaves.filter(wave => wave.age < SHOCKWAVE.duration);
     // Resolve attacks first: a kill in this step protects the ship from that target.
     for (const obstacle of state.obstacles) {
-      if (obstacle.hp > 0 && obstacle.warning <= 0 && intersectsSweep(shipBefore, state.ship, obstacle.before, obstacle, obstacle.radius + 4)) state.ended = true;
+      if (obstacle.hp > 0 && obstacle.warning <= 0 && intersectsSweep(shipBefore, state.ship, obstacle.before, obstacle, obstacle.radius + state.ship.radius)) state.ended = true;
     }
     // A lethal impact stops collection. Expiration wins ties with pickup.
     if (!state.ended) {
@@ -132,10 +136,14 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
         if (resource.life <= 1e-10) continue;
         const dx = state.ship.x - resource.x, dy = state.ship.y - resource.y;
         const distance = Math.hypot(dx, dy);
+        resource.vx = 0; resource.vy = 0;
         if (distance <= RESOURCE.attraction) {
           const travel = Math.min(distance, RESOURCE.speed * dt);
-          if (distance) { resource.x += dx / distance * travel; resource.y += dy / distance * travel; }
-          if (distance - travel <= RESOURCE.pickup) {
+          if (distance) {
+            resource.vx = dx / distance * RESOURCE.speed; resource.vy = dy / distance * RESOURCE.speed;
+            moveSprite(resource, travel / RESOURCE.speed);
+          }
+          if (distance - travel <= resource.radius) {
             resource.life = 0;
             if (resource.kind === 'shockwave') state.shockwaveCharges = Math.min(3, state.shockwaveCharges + 1);
             else if (state.weaponLevel < 4) state.weaponLevel++;

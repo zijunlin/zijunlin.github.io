@@ -24,12 +24,12 @@ test('only a killing hit awards the obstacle score, once', () => {
   assert.equal(hitObstacle(obstacle), 0);
 });
 
-test('battle pause freezes time and movement, and diagonal movement is normalized', async () => {
+test('battle pause freezes time and movement, and diagonal movement is normalized at 390 CSS px per second', async () => {
   const { createBattle } = await import('../../src/features/work-games/battle.js');
   const battle = createBattle({ bounds: { left: 0, right: 1000, top: 0, bottom: 1000 }, random: () => .5 });
   const start = { ...battle.state.ship };
   battle.advance(.1, { x: 1, y: -1 });
-  assert.ok(Math.abs(Math.hypot(battle.state.ship.x - start.x, battle.state.ship.y - start.y) - 30) < .001);
+  assert.ok(Math.abs(Math.hypot(battle.state.ship.x - start.x, battle.state.ship.y - start.y) - 39) < .001);
   battle.setPaused(true);
   const frozen = JSON.stringify(battle.state);
   battle.advance(100, { x: 1, y: 0 });

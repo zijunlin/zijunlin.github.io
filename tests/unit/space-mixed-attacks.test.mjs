@@ -68,9 +68,12 @@ function scenario(waveAt = null, release = true) {
       assert.equal(battle.state.resources.length - resources, 1);
       assert.equal(battle.state.shockwaveCharges, charges - 1);
       assert.equal(battle.state.ended, false, 'the mixed attack kill wins the ship collision');
+      const level = battle.state.weaponLevel;
       battle.advance(dt * 3);
       assert.equal(battle.state.score - score, 60, 'no duplicate kill score');
-      assert.equal(battle.state.resources.length - resources, 1, 'no duplicate drop');
+      // Faster attraction now collects this nearby drop within three steps.
+      assert.equal(battle.state.resources.length - resources, 0);
+      assert.equal(battle.state.weaponLevel, level + 1, 'one drop produces one upgrade');
     }
     return changes;
   }

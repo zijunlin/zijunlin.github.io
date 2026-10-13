@@ -69,8 +69,15 @@ test('a real weapon drop at maximum level awards 50 points once and freezes with
 });
 
 test('simultaneous max-level drops show their combined score even alongside a shockwave refill', () => {
-  const battle = createBattle({ bounds: { left: 24, right: 1256, top: 221.6, bottom: 780 }, random: () => .5, reducedMotion: true });
-  for (const [seconds, y] of [[.3,0],[6,0],[1.7,-1],[.7,1],[2.68,0],[.8,-1],[1,1],[6,0],[.9,-1],[1,1],[4,0],[1,-1],[1,1],[4,0],[1,-1]]) battle.advance(seconds, { x: 0, y });
+  const battle = grow();
+  while (battle.state.resources.filter(resource => resource.kind === 'weapon').length < 2 && battle.state.seconds < 40) battle.advance(1 / 120);
+  assert.equal(battle.state.resources.filter(resource => resource.kind === 'weapon').length, 2);
+  assert.ok(battle.state.resources.some(resource => resource.kind === 'shockwave'));
+  const score = battle.state.score, charges = battle.state.shockwaveCharges;
+  battle.resize({ ...bounds, top: -100, bottom: battle.state.resources[0].y + 23.1 });
+  battle.advance(1 / 120);
+  assert.equal(battle.state.score - score, 100);
+  assert.equal(battle.state.shockwaveCharges, Math.min(3, charges + 1));
   assert.equal(battle.state.weaponLevel, 4);
   assert.equal(battle.state.pickupScore, 100);
   assert.ok(battle.state.pickupFeedback > 0);
