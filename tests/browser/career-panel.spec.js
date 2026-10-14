@@ -62,7 +62,7 @@ test('direct career links reload and remain readable without WebGL', async ({ pa
   await expect(career).toBeVisible();
   await page.reload();
   await expect(career).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(career).toBeHidden();
   await expect(page.locator('.celestial-stage').getByRole('link', { name: '职业历程', exact: true })).toBeFocused();

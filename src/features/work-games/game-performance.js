@@ -12,12 +12,16 @@ function mountArtwork(layer, captures, reduced) {
     layer.append(element);
     return { element };
   });
-  const ship = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  const ship = document.createElement('div');
   ship.classList.add('game-ship');
-  ship.setAttribute('viewBox', '-24 -30 48 72');
-  ship.innerHTML = '<path fill="#a7e9ed" d="M0-26 19 19 7 13 0 19-7 13-19 19Z"/><path fill="#163a49" d="M0-13 6 9 0 5-6 9Z"/><path fill="#e5ffff" d="M-2-6H2V3H-2Z"/><path fill="#8de9f080" d="M-5 18 0 34 5 18Z"/>';
+  const hull = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  hull.classList.add('game-ship-art');
+  hull.setAttribute('viewBox', '-24 -30 48 72');
+  hull.innerHTML = '<path fill="#a7e9ed" d="M0-26 19 19 7 13 0 19-7 13-19 19Z"/><path fill="#163a49" d="M0-13 6 9 0 5-6 9Z"/><path fill="#e5ffff" d="M-2-6H2V3H-2Z"/><path fill="#8de9f080" d="M-5 18 0 34 5 18Z"/>';
+  ship.append(hull);
   layer.append(ship);
-  let appearanceTime = -1, bank = 0, previousCenterX;
+  let appearanceTime = -1, bank = 0, previousCenterX, previousMotionTime;
+  let bankFrom = 0, bankTarget = 0, bankElapsed = .18, renderedBank;
   function render(time, orbitTime, bounds, center, dt = 0) {
     const appearanceChanged = time !== appearanceTime;
     const down = ease((time - 1.8) / 1.2);
@@ -39,14 +43,24 @@ function mountArtwork(layer, captures, reduced) {
       element.style.transform = `translate(${x - capture.size / 2}px, ${y - capture.size / 2}px) scale(${blend(1, .65, ease(time / 1.7))})`;
       if (appearanceChanged) capture.setEnvelopeScale(blend(1, .45, ease(time / 1.7)));
     });
-    // A target may be reached before the final simulation substep. Use the
-    // full rendered-frame displacement so slow drags still bank visibly.
-    const velocity = center && previousCenterX !== undefined && dt > 0
-      ? (center.x - previousCenterX) / dt : 0;
-    previousCenterX = center?.x;
-    const desired = reduced ? 0 : Math.max(-1, Math.min(1, velocity / (center?.movementSpeed || 390)));
-    bank += (desired - bank) * (1 - Math.exp(-dt * 14));
-    ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px) perspective(160px) rotateY(${bank * 28}deg) rotateZ(${bank * 10}deg)`;
+    // Compare completed simulation frames, not displacement / render dt:
+    // fixed simulation steps can otherwise vary the apparent speed each frame.
+    if (center && dt > 0 && orbitTime !== previousMotionTime) {
+      const direction = reduced || previousCenterX === undefined ? 0 : Math.sign(center.x - previousCenterX);
+      previousCenterX = center.x; previousMotionTime = orbitTime;
+      if (direction !== bankTarget) {
+        bankFrom = bank; bankTarget = direction; bankElapsed = 0;
+      }
+    }
+    bankElapsed = Math.min(.18, bankElapsed + dt);
+    bank = blend(bankFrom, bankTarget, ease(bankElapsed / .18));
+    // Only translation changes while cruising. The inner hull keeps its exact
+    // settled pose, avoiding repeated updates to its perspective/filter layer.
+    ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px)`;
+    if (bank !== renderedBank) {
+      hull.style.transform = bank === 0 ? 'none' : `perspective(160px) rotateY(${bank * 28}deg)`;
+      renderedBank = bank;
+    }
     if (appearanceChanged) ship.style.opacity = String(ease((time - 1.25) / .55));
     appearanceTime = time;
   }
@@ -68,7 +82,7 @@ function mountArtwork(layer, captures, reduced) {
     } : undefined);
     ship.style.opacity = String((1 - ease(progress / .4)) * ease((startTime - 1.25) / .55));
   }
-  return { render, returning, resetBank() { bank = 0; previousCenterX = undefined; }, remove() { satellites.forEach(({ element }) => element.remove()); ship.remove(); } };
+  return { render, returning, resetBank() { bank = bankFrom = bankTarget = 0; bankElapsed = .18; previousCenterX = previousMotionTime = undefined; }, remove() { satellites.forEach(({ element }) => element.remove()); ship.remove(); } };
 }
 
 // Own the complete visual handoff; the game supplies time, its arena and formation.

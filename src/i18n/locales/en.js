@@ -1,6 +1,8 @@
 // Exact source strings keep the Chinese copy alongside its existing markup.
 export const english = {
-  'Shift + G 开始游戏': 'Shift + G to play',
+  '软件工程 · 持续探索': 'Software engineering · Continuous exploration',
+  '软件工程 · 成长路径': 'Software engineering · A path of growth',
+  '三击一下': 'Triple tap',
   'Zijun Lin 的个人网站。': 'The personal website of Zijun Lin.',
   '主目录': 'Main navigation', '首页': 'Home', '作品': 'Work', '心得': 'Notes', '关于': 'About', '切换语言': 'Switch language',
   '页面内容': 'Page content', '正在构建世界': 'Building the world', '世界暂时无法显示': 'The world is temporarily unavailable',

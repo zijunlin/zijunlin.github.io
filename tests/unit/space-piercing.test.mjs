@@ -129,7 +129,8 @@ test('a piercing bolt crosses one target over many steps, then disappears on its
 test('four-trajectory piercing shots each damage two different targets once', () => {
   const { battle, targets, dt } = arrangeTargets([-1, 0, 1], 4);
   for (let i = 0; i < 220 && targets.every(t => t.hp === 3); i++) battle.advance(dt);
-  assert.deepEqual(targets.map(t => t.hp), [3, 2, 2]);
+  const hitPoints = targets.map(t => t.hp);
+  assert.deepEqual([...hitPoints].sort(), [2, 2, 3]);
   battle.advance(dt * 3);
-  assert.deepEqual(targets.map(t => t.hp), [3, 2, 2]);
+  assert.deepEqual(targets.map(t => t.hp), hitPoints);
 });

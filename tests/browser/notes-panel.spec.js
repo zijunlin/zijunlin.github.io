@@ -45,7 +45,7 @@ test('direct notes links reload and remain usable without world rendering', asyn
   await expect(panel).toBeVisible();
   await page.reload();
   await expect(panel.getByRole('heading', { name: '还没有发布的随笔' })).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(page.getByRole('navigation').getByRole('link', { name: '心得', exact: true })).toBeFocused();

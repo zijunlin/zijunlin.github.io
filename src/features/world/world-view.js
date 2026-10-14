@@ -49,6 +49,10 @@ function circleArt(index) {
   </svg>`;
 }
 
+// SVG IDs only need to distinguish mounted views in this document, including
+// local HTTP previews where crypto.randomUUID is unavailable.
+let nextTrailMaskId = 0;
+
 // Transparent vector constellations remain crisp and usable without a 3D GPU.
 export async function mountWorldView(container, state) {
   const area = document.createElement('section');
@@ -63,7 +67,7 @@ export async function mountWorldView(container, state) {
   trails.setAttribute('preserveAspectRatio', 'none');
   trails.setAttribute('aria-hidden', 'true');
   trails.classList.add('celestial-trails');
-  const maskId = `trail-disc-mask-${crypto.randomUUID()}`;
+  const maskId = `trail-disc-mask-${++nextTrailMaskId}`;
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   defs.innerHTML = `<mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="640" height="440" style="mask-type:luminance"><rect width="640" height="440" fill="white" stroke="none"/></mask>`;
   trails.append(defs);

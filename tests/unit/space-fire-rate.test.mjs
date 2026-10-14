@@ -2,16 +2,21 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 
-function collectTwo() {
+function collectTwo(observe = () => {}) {
   
   const battle = createBattle({ bounds: { left: 0, right: 800, top: 0, bottom: 300 }, random: () => .5, reducedMotion: true });
+  function advance(seconds, input) {
+    for (let elapsed = 0; elapsed < seconds - 1e-10; elapsed += 1 / 120) {
+      battle.advance(1 / 120, input); observe(battle.state);
+    }
+  }
   for (let pickup = 0; pickup < 2; pickup++) {
-    while (!battle.state.resources.length && battle.state.seconds < 15) battle.advance(1 / 120);
-    while (battle.state.resources.length && battle.state.seconds < 15) battle.advance(1 / 120, { x: 0, y: -1 });
+    while (!battle.state.resources.length && battle.state.seconds < 15) advance(1 / 120);
+    while (battle.state.resources.length && battle.state.seconds < 15) advance(1 / 120, { x: 0, y: -1 });
     if (pickup === 0) {
       // Keep the original return position (y=262) with the smaller ship-only inset.
       battle.resize({ left: 0, right: 800, top: 0, bottom: 285.1 });
-      battle.advance(.8, { x: 0, y: 1 });
+      advance(.8, { x: 0, y: 1 });
       battle.resize({ left: 0, right: 800, top: 0, bottom: 300 });
     }
   }
@@ -22,7 +27,7 @@ test('two collected drops accelerate the three-shot fan while satellites keep .1
   const battle = collectTwo();
   assert.equal(battle.state.trajectoryCount, 3);
   assert.equal(battle.state.fireInterval, .13);
-  assert.equal(battle.state.ship.movementSpeed, 390);
+  assert.equal(battle.state.ship.movementSpeed, 510);
   assert.equal(battle.state.piercing, false);
   assert.equal(battle.state.ended, false);
   assert.equal(battle.state.resources.length, 0);
@@ -50,9 +55,12 @@ test('two collected drops accelerate the three-shot fan while satellites keep .1
 });
 
 test('upgrading retains the in-flight wait before adopting faster fire, without a burst', () => {
-  const battle = collectTwo();
-  const latestForward = Math.max(...battle.state.bullets.filter(b => b.vy < -500 && Math.abs(b.vx) > 20).map(b => b.life));
-  const sinceVolley = 1.9 - latestForward;
+  let lastVolley;
+  const battle = collectTwo(state => {
+    if (state.bullets.some(b => b.life > 1.89 && b.vy < -500 && Math.abs(b.vx) > 20)) lastVolley = state.seconds;
+  });
+  assert.ok(Number.isFinite(lastVolley));
+  const sinceVolley = battle.state.seconds - lastVolley;
   let waited = 0, newShots = [];
   while (!newShots.length && waited < .2) {
     battle.advance(1 / 120); waited += 1 / 120;

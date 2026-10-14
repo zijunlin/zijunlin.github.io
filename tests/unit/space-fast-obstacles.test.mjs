@@ -121,3 +121,11 @@ test('shockwaves destroy a fast carrier once and fast ship contacts end a battle
   impact.advance(1 / 120);
   assert.equal(impact.state.ended, true);
 });
+
+test('ordinary obstacle speed rises with the two-tier ship baseline increase', () => {
+  const battle = scenario(.5);
+  battle.advance(1.01);
+  const obstacle = battle.state.obstacles[0];
+  assert.ok(obstacle);
+  assert.ok(Math.abs(Math.hypot(obstacle.vx, obstacle.vy) - 42 * 510 / 390) < 1e-8);
+});

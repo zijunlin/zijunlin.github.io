@@ -13,16 +13,16 @@ function upgradedDrop() {
     battle.resize({ left: x - 13.2, right: x + 13.2, top: y - 16.5, bottom: y + 23.1 });
     battle.resize({ left: -3000, right: 3000, top: -3000, bottom: 3000 });
   }
-  assert.equal(battle.state.ship.movementSpeed, 570);
+  assert.equal(battle.state.ship.movementSpeed, 690);
   return { battle, drop, place };
 }
 
-test('a real drop catches a ship moving at 570, stops outside attraction, and collects once at full growth', () => {
+test('a real drop catches a ship moving at 690, stops outside attraction, and collects once at full growth', () => {
   const { battle, drop, place } = upgradedDrop();
   place(drop.x, drop.y + 100);
   const initial = { x: drop.x, y: drop.y }, shipY = battle.state.ship.y;
   battle.advance(step, { x: 0, y: 1 });
-  assert.ok(Math.abs(battle.state.ship.y - shipY - 4.75) < 1e-8);
+  assert.ok(Math.abs(battle.state.ship.y - shipY - 5.75) < 1e-8);
   assert.ok(Math.abs(drop.y - initial.y - 6) < 1e-8);
   place(drop.x, drop.y + 111);
   const stopped = { x: drop.x, y: drop.y };

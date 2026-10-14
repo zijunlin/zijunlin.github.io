@@ -104,6 +104,35 @@ export function mountGameEntry(scene, getWorld) {
     returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
     load();
   }
+  // Touch-only shortcut: three short taps near one point on the empty home
+  // background. Reading, controls, drags and extra fingers break the sequence.
+  let tap, tapCount = 0, lastTap;
+  const resetTaps = () => { tap = null; tapCount = 0; lastTap = null; };
+  const blankHome = target => eligible() && !session && !loading && !dialog
+    && !target.closest('a, button, input, textarea, select, [role="button"], [contenteditable], nav, header, footer, dialog, .reading-panel, .scene-heading');
+  window.addEventListener('pointerdown', event => {
+    if (event.pointerType !== 'touch' || !event.isPrimary || pressed.size !== 1 || !blankHome(event.target)) {
+      resetTaps(); return;
+    }
+    tap = { id: event.pointerId, x: event.clientX, y: event.clientY, at: performance.now() };
+  }, { capture: true });
+  window.addEventListener('pointermove', event => {
+    if (tap?.id === event.pointerId && Math.hypot(event.clientX - tap.x, event.clientY - tap.y) > 12) resetTaps();
+  }, { capture: true });
+  window.addEventListener('pointerup', event => {
+    if (tap?.id !== event.pointerId) return;
+    const now = performance.now(), current = tap;
+    tap = null;
+    if (!blankHome(event.target) || now - current.at > 350
+      || Math.hypot(event.clientX - current.x, event.clientY - current.y) > 12) { resetTaps(); return; }
+    const consecutive = lastTap && now - lastTap.at <= 500
+      && Math.hypot(current.x - lastTap.x, current.y - lastTap.y) <= 32;
+    tapCount = consecutive ? tapCount + 1 : 1;
+    lastTap = { ...current, at: now };
+    if (tapCount === 3) { resetTaps(); enter(); }
+  }, { capture: true });
+  for (const type of ['pointercancel', 'blur', 'hashchange', 'popstate']) window.addEventListener(type, resetTaps);
+  document.addEventListener('visibilitychange', resetTaps);
   const interval = setInterval(() => {
     const now = performance.now();
     const delta = Math.min(now - last, 250); last = now;

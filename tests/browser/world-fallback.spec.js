@@ -1,6 +1,15 @@
 import { test, expect } from '@playwright/test';
 test.beforeEach(async ({ page }) => { await page.emulateMedia({ reducedMotion: 'reduce' }); });
 
+test('world remains usable when randomUUID is unavailable on local HTTP', async ({ page }) => {
+  await page.addInitScript(() => { Object.defineProperty(crypto, 'randomUUID', { value: undefined }); });
+  await page.goto('/?seed=0');
+  await expect(page.locator('.celestial-gate')).toHaveCount(4);
+  await expect(page.getByRole('alert')).toBeHidden();
+  await page.getByRole('link', { name: '随笔', exact: true }).click();
+  await expect(page.getByRole('region', { name: '随笔', exact: true })).toBeVisible();
+});
+
 for (const resource of ['world-scene', 'world-view']) {
   test(`${resource} download failure preserves content and work previews`, async ({ page }) => {
     await page.route(`**/assets/${resource}-*.js`, route => route.abort());

@@ -29,6 +29,7 @@ async function finger(page, type, x, y) {
 
 test('relative drag, release, shockwave, pause, height resize and orientation', async ({ page }) => {
   await enter(page);
+  await expect(page.getByRole('button', { name: '暂停', exact: true })).toHaveCount(0);
   const initial = await position(page);
   await finger(page, 'touchStart', 120, 500);
   await page.clock.runFor(32);
@@ -45,7 +46,7 @@ test('relative drag, release, shockwave, pause, height resize and orientation', 
   await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
   await page.setViewportSize({ width: 390, height: 760 });
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.getByRole('button', { name: '暂停', exact: true }).tap();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
   await page.getByRole('button', { name: '继续游戏', exact: true }).tap();
   await page.setViewportSize({ width: 844, height: 390 });
@@ -53,13 +54,13 @@ test('relative drag, release, shockwave, pause, height resize and orientation', 
   await page.getByRole('button', { name: '继续游戏', exact: true }).tap();
   await page.clock.runFor(32);
   await page.screenshot({ path: '.scratch/mobile-game-landscape.png' });
-  await page.getByRole('button', { name: '暂停', exact: true }).tap();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.getByRole('button', { name: '结束本局', exact: true }).tap();
   await expect(page.getByRole('dialog', { name: '本局结束' })).toBeVisible();
   await page.getByRole('button', { name: '再来一局', exact: true }).tap();
   await page.clock.runFor(32);
   await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
-  await page.getByRole('button', { name: '暂停', exact: true }).tap();
+  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await page.getByRole('button', { name: '结束本局', exact: true }).tap();
   await page.getByRole('button', { name: '返回首页', exact: true }).tap();
   await page.clock.runFor(1800);
@@ -136,4 +137,50 @@ test('dragging beyond the ship edge does not delay an immediate reversal', async
   const reversed = await page.locator('.game-ship').boundingBox();
   expect(reversed.x - edge.x).toBeGreaterThan(28);
   expect(reversed.x - edge.x).toBeLessThan(32);
+});
+
+test('three quick blank-area taps enter early, while two taps and dragging do not', async ({ page }) => {
+  await page.touchscreen.tap(25, 700);
+  await page.clock.runFor(150);
+  await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.clock.runFor(800);
+  await finger(page, 'touchStart', 25, 700);
+  await finger(page, 'touchMove', 65, 700);
+  await finger(page, 'touchEnd');
+  await page.touchscreen.tap(25, 700);
+  await page.clock.runFor(150);
+  await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.clock.runFor(150);
+  await page.touchscreen.tap(25, 700);
+  await expect(page.getByText('正在集结')).toBeVisible();
+});
+
+test('content and long presses break triple-tap entry, which remains available after returning', async ({ page }) => {
+  await expect(page.getByText('三击一下', { exact: true })).toBeVisible();
+  await page.touchscreen.tap(25, 700);
+  await page.touchscreen.tap(25, 700);
+  await page.getByRole('button', { name: 'English', exact: true }).tap();
+  await expect(page.getByText('Triple tap', { exact: true })).toBeVisible();
+  await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.locator('.celestial-gate[href="#about"]').tap();
+  await page.clock.runFor(1200);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.locator('nav a[href="#"]').tap();
+  await page.touchscreen.tap(25, 700);
+  await page.touchscreen.tap(25, 700);
+  await finger(page, 'touchStart', 25, 700);
+  await page.clock.runFor(500);
+  await finger(page, 'touchEnd');
+  await page.touchscreen.tap(25, 700);
+  await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toBeVisible();
+  await page.locator('nav a[href="#about"]').tap();
+  await page.locator('nav a[href="#"]').tap();
+  for (let i = 0; i < 3; i++) await page.touchscreen.tap(25, 700);
+  await expect(page.locator('.space-game')).toBeVisible();
 });

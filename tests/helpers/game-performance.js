@@ -56,7 +56,7 @@ export function startObservation(durationMs) {
       m.ended ||= s.ended;
       if (previousShip) m.shipDistance += Math.hypot(s.ship.x - previousShip.x, s.ship.y - previousShip.y);
       previousShip = s.ship;
-      m.attributesValid = (m.attributesValid ?? true) && s.trajectoryCount === 24 && s.fireInterval === .11 && s.piercing && s.ship.movementSpeed === 570;
+      m.attributesValid = (m.attributesValid ?? true) && s.trajectoryCount === 24 && s.fireInterval === .11 && s.piercing && s.ship.movementSpeed === 690;
       const cohorts = new Map();
       for (const b of s.bullets.filter(b => b.piercing)) {
         const life = b.life.toFixed(6);

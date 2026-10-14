@@ -33,7 +33,7 @@ test('direct about links survive reload and home clears content state without re
   await expect(nav.getByRole('link', { name: '关于', exact: true })).toHaveAttribute('aria-current', 'page');
   await page.reload();
   await expect(panel).toBeVisible();
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(panel).toBeHidden();
   await expect(nav.getByRole('link', { name: '关于', exact: true })).toBeFocused();
@@ -49,7 +49,7 @@ test('direct about links survive reload and home clears content state without re
   await nav.getByRole('link', { name: '首页', exact: true }).click();
   await expect.poll(() => new URL(page.url()).hash).toBe('');
   expect(new URL(page.url()).search).toBe('?seed=3');
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
 });
 
 for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {

@@ -19,7 +19,7 @@ test('random scenario survives 16 rejected positions, then recovers with correct
   battle.advance(1);
   assert.equal(battle.state.obstacles[0].radius, 30);
   assert.equal(battle.state.obstacles[0].hp, 5);
-  assert.ok(Math.abs(Math.hypot(battle.state.obstacles[0].vx, battle.state.obstacles[0].vy) - 22.4) < .001);
+  assert.ok(Math.abs(Math.hypot(battle.state.obstacles[0].vx, battle.state.obstacles[0].vy) - 22.4 * 510 / 390) < .001);
   assert.equal(battle.state.obstacles[0].fast, false);
   battle.advance(8);
   assert.ok(purposes.includes('fast'));
@@ -64,7 +64,7 @@ test('preflight rejects the clock and random-phase failures before a full measur
 
 test('measurement starts a fresh clock and retains a transient complete volley', () => {
   const callbacks = [];
-  const state = { ship: { x: 0, y: 0, movementSpeed: 570 }, trajectoryCount: 24, fireInterval: .11, piercing: true,
+  const state = { ship: { x: 0, y: 0, movementSpeed: 690 }, trajectoryCount: 24, fireInterval: .11, piercing: true,
     obstacles: [{ fast: true }, { fast: false }], bullets: Array.from({ length: 24 }, () => ({ piercing: true, life: 1.9 })) };
   const context = { window: { battleSnapshot: state, backgroundDraws: 3 }, performance: { now: () => 100 },
     document: { hidden: false, hasFocus: () => true, querySelector: () => null }, requestAnimationFrame: callback => callbacks.push(callback) };

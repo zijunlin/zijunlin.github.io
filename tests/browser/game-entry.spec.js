@@ -189,9 +189,9 @@ test('Shift+G hint starts opening directly and works again after exiting', async
   await page.goto('/?layout=B');
   await expect(page.locator('#world-entry')).toBeVisible();
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
-  await expect(page.getByText('Shift + G 开始游戏', { exact: true })).toBeVisible();
+  await expect(page.getByText('Shift+G', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'English', exact: true }).click();
-  await expect(page.getByText('Shift + G to play', { exact: true })).toBeVisible();
+  await expect(page.getByText('Shift+G', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: '中文', exact: true }).click();
   await page.keyboard.press('Shift+G');
   await expect(page.getByText('正在集结')).toBeVisible();
@@ -200,7 +200,7 @@ test('Shift+G hint starts opening directly and works again after exiting', async
   await expect(page.locator('.space-game')).toHaveCount(1);
   await page.keyboard.press('Escape');
   await page.clock.runFor(1700);
-  await expect(page.getByText('Shift + G 开始游戏', { exact: true })).toBeVisible();
+  await expect(page.getByText('Shift+G', { exact: true })).toBeVisible();
   await page.clock.runFor(11000);
   await expect(page.locator('.space-game')).toHaveCount(0);
   await page.keyboard.press('Shift+G');

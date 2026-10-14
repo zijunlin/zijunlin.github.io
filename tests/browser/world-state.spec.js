@@ -7,15 +7,15 @@ test.beforeEach(async ({ page }) => {
 
 test('a fixed seed selects a celestial layout before the scene is shown', async ({ page }) => {
   await page.goto('/?seed=514018');
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await expect(page.getByRole('heading', { name: '在构建中，保持好奇。' })).toBeVisible();
 });
 
 for (const [seed, combination] of [
-  [0, '星辰圆点 · 环绕核心'],
-  [2, '星辰圆点 · 环绕核心'],
-  [3, '星辰圆点 · 成长路径'],
-  [4, '星辰圆点 · 成长路径'],
+  [0, '软件工程 · 持续探索'],
+  [2, '软件工程 · 持续探索'],
+  [3, '软件工程 · 成长路径'],
+  [4, '软件工程 · 成长路径'],
 ]) {
   test(`seed ${seed} reproduces ${combination}`, async ({ page }) => {
     await page.goto(`/?seed=${seed}`);
@@ -27,10 +27,10 @@ test('the entry timestamp is retained across reload, visibility, and content URL
   await page.clock.setFixedTime(new Date('2026-10-04T10:00:00Z'));
   await page.goto('/');
   const combination = page.getByLabel('世界形态与空间布局');
-  await expect(combination).toHaveText('星辰圆点 · 成长路径');
+  await expect(combination).toHaveText('软件工程 · 成长路径');
   await page.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
   await page.reload();
-  await expect(combination).toHaveText('星辰圆点 · 成长路径');
+  await expect(combination).toHaveText('软件工程 · 成长路径');
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, value: true });
     document.dispatchEvent(new Event('visibilitychange'));
@@ -38,20 +38,20 @@ test('the entry timestamp is retained across reload, visibility, and content URL
     document.dispatchEvent(new Event('visibilitychange'));
     location.hash = '#work';
   });
-  await expect(combination).toHaveText('星辰圆点 · 成长路径');
+  await expect(combination).toHaveText('软件工程 · 成长路径');
   await page.goBack();
-  await expect(combination).toHaveText('星辰圆点 · 成长路径');
+  await expect(combination).toHaveText('软件工程 · 成长路径');
 });
 
 test('a new tab without session state uses its own entry time', async ({ page, context }) => {
   await page.clock.setFixedTime(new Date('2026-10-04T10:00:00Z'));
   await page.goto('/');
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   const other = await context.newPage();
   await other.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
   await other.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
   await other.goto('/');
-  await expect(other.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 环绕核心');
+  await expect(other.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 持续探索');
 });
 
 test('slow mounting never displays a default combination before the chosen one', async ({ page }) => {
@@ -76,7 +76,7 @@ test('slow mounting never displays a default combination before the chosen one',
   release();
   await expect(page.getByLabel('世界形态与空间布局')).toBeVisible();
   await expect.poll(() => page.evaluate(() => [...new Set(window.visibleCombinations)]))
-    .toEqual(['星辰圆点 · 成长路径']);
+    .toEqual(['软件工程 · 成长路径']);
 });
 
 for (const stored of ['not-a-number', '-1', 'Infinity', '1.5']) {
@@ -84,7 +84,7 @@ for (const stored of ['not-a-number', '-1', 'Infinity', '1.5']) {
     await page.clock.setFixedTime(new Date('2026-10-04T10:00:00Z'));
     await page.addInitScript(value => sessionStorage.setItem('world-entry-seed', value), stored);
     await page.goto('/');
-    await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+    await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   });
 }
 
@@ -94,14 +94,14 @@ test('blocked storage still gives background and scene a usable entry', async ({
     Object.defineProperty(window, 'sessionStorage', { get() { throw new DOMException('Blocked', 'SecurityError'); } });
   });
   await page.goto('/');
-  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+  await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await expect(page.getByRole('alert')).toBeHidden();
 });
 
 test('retired world parameters do not change the celestial view or layout', async ({ page }) => {
   for (const value of ['island', 'system', 'unknown']) {
     await page.goto(`/?seed=3&world=${value}`);
-    await expect(page.getByLabel('世界形态与空间布局')).toHaveText('星辰圆点 · 成长路径');
+    await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
     await expect(page.locator('.celestial-gate')).toHaveCount(4);
     await expect(page.locator('.world-stage canvas, .world-protagonist-slot')).toHaveCount(0);
   }

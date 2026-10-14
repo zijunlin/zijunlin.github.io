@@ -1,3 +1,7 @@
+export const SHIP_SPEED = { initial: 510, step: 60, maximum: 690 };
+// Raise obstacle travel by the same ratio as the ship's two-tier increase.
+export const OBSTACLE_SPEED_MULTIPLIER = 510 / 390;
+
 // Keep the visible hull in the activity area; satellites may extend outside it.
 // Both simulated movement and accumulated touch targets share this boundary.
 export function constrainShipPosition(position, bounds) {

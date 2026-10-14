@@ -95,7 +95,7 @@ test('full 24-trajectory growth, mixed fast obstacles, wave, pause and terminal 
   assert.equal(endedSnapshot.shockwaveCharges, 2);
   assert.equal(endedSnapshot.trajectoryCount, 24);
   assert.equal(endedSnapshot.fireInterval, .11);
-  assert.equal(endedSnapshot.ship.movementSpeed, 570);
+  assert.equal(endedSnapshot.ship.movementSpeed, 690);
   assert.equal(endedSnapshot.piercing, true);
   record.battle.advance(2, { x: 1, y: 1, shockwave: true });
   assert.deepEqual(snapshot(record.battle), endedSnapshot);

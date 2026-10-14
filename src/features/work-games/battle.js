@@ -3,7 +3,7 @@ import { createSprite } from './sprites.js';
 import { advanceMotion } from './motion.js';
 import { obstacleTypes } from './obstacle-types.js';
 import { createProjectile, projectileProfiles, advanceProjectile } from './projectiles.js';
-import { difficultyAt, hitObstacle, intersectsSweep, constrainShipPosition } from './rules.js';
+import { difficultyAt, hitObstacle, intersectsSweep, constrainShipPosition, SHIP_SPEED, OBSTACLE_SPEED_MULTIPLIER } from './rules.js';
 // Pickup distances use CSS pixels; feedback lifetime uses battle seconds.
 const RESOURCE = { lifetime: 8, attraction: 110, speed: 720, pickup: 16, feedback: 1.2, edgeInset: 12 };
 const STEP = 1 / 120;
@@ -13,7 +13,7 @@ const constrain = (n, low, high) => Math.max(low, Math.min(high, n));
 // Random purposes let deterministic scenarios survive spawn retries; zero-argument sources remain valid.
 // A deterministic simulation: only advancing an unpaused battle consumes time.
 export function createBattle({ bounds, random = Math.random, reducedMotion = false }) {
-  const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: 390 }, bullets: [], obstacles: [], particles: [], resources: [], trajectoryCount: 2, fireInterval: .16, piercing: false, pickupFeedback: 0, pickupScore: 0, pickupResults: [], shockwaveCharges: 1, shockwaves: [] };
+  const state = { seconds: 0, score: 0, ended: false, ship: { ...createSprite({ x: (bounds.left + bounds.right) / 2, y: bounds.bottom - 45, radius: 4 }), movementSpeed: SHIP_SPEED.initial }, bullets: [], obstacles: [], particles: [], resources: [], trajectoryCount: 2, fireInterval: .16, piercing: false, pickupFeedback: 0, pickupScore: 0, pickupResults: [], shockwaveCharges: 1, shockwaves: [] };
   let paused = false, remainder = 0, shotWait = 0, satelliteWait = 0, spawnWait = 1, generated = 0, shockwaveHeld = false, shockwavePending = false;
   function spawn() {
     if (state.obstacles.length >= 45) return;
@@ -29,7 +29,7 @@ export function createBattle({ bounds, random = Math.random, reducedMotion = fal
     const heading = Math.atan2(state.ship.y - y, state.ship.x - x) + (random('heading') - .5) * .9;
     const baseVelocity = (32 + random('speed') * 20 + difficultyAt(state.seconds).level * 9) * type.sizeSpeedMultiplier;
     const fast = state.seconds >= 9 && random('fast') < .15;
-    const velocity = baseVelocity * (fast ? 2 : 1);
+    const velocity = baseVelocity * OBSTACLE_SPEED_MULTIPLIER * (fast ? 2 : 1);
     generated++;
     state.obstacles.push({ ...type, fast, ...createSprite({ x, y, radius: type.radius, vx: Math.cos(heading) * velocity, vy: Math.sin(heading) * velocity }), resource: generated % 4 === 0 ? dropCycle[(generated / 4 - 1) % dropCycle.length] : null, warning: .65, flash: 0 });
   }

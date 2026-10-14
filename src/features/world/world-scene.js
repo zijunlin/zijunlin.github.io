@@ -12,12 +12,12 @@ export async function mountWorld(container, state) {
   combination.className = 'world-combination';
   combination.setAttribute('role', 'group');
   combination.setAttribute('aria-label', '世界形态与空间布局');
-  const worldName = '星辰圆点';
-  const layoutName = state.layout === 'A' ? '环绕核心' : '成长路径';
+  const worldName = '软件工程';
+  const layoutName = state.layout === 'A' ? '持续探索' : '成长路径';
   combination.textContent = `${worldName} · ${layoutName}`;
   const metadata = document.createElement('div'); metadata.className = 'world-metadata';
   const shortcut = document.createElement('span'); shortcut.className = 'world-game-shortcut';
-  shortcut.textContent = 'Shift + G 开始游戏';
+  shortcut.textContent = matchMedia('(any-pointer: coarse)').matches ? '三击一下' : 'Shift+G';
   metadata.append(combination, shortcut);
   heading.append(eyebrow, title, metadata);
   localize(heading);

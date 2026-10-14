@@ -79,7 +79,7 @@ test('serializable motion descriptors support both free flight and attraction wi
 test('every pickup has a marker and bilingual outcomes, including full-cap rewards', () => {
   assert.deepEqual(Object.keys(pickupPresentation).sort(), Object.keys(pickups).sort());
   assert.ok(dropCycle.every(kind => pickupPresentation[kind]));
-  const baseline = () => ({ trajectoryCount: 2, fireInterval: .16, piercing: false, ship: { movementSpeed: 390 }, shockwaveCharges: 1 });
+  const baseline = () => ({ trajectoryCount: 2, fireInterval: .16, piercing: false, ship: { movementSpeed: 510 }, shockwaveCharges: 1 });
   for (const kind of Object.keys(pickups)) {
     const state = baseline();
     for (let count = 0; count < 25; count++) {
@@ -100,10 +100,10 @@ test('combined effects reuse existing result feedback and report the configured 
   pickups.combined = { abilities: [...pickups.trajectory.abilities, ...pickups.movement.abilities] };
   const maxHits = projectileProfiles.piercing.maxHits;
   try {
-    const state = { trajectoryCount: 2, ship: { movementSpeed: 390 } };
+    const state = { trajectoryCount: 2, ship: { movementSpeed: 510 } };
     const results = applyPickup('combined', state);
     assert.equal(state.trajectoryCount, 3);
-    assert.equal(state.ship.movementSpeed, 450);
+    assert.equal(state.ship.movementSpeed, 570);
     assert.deepEqual(results.map(result => describePickup(result, (_, en) => en)), ['Ship trajectories +1 · Now 3', 'Ship movement speed increased']);
     projectileProfiles.piercing.maxHits = 3;
     assert.equal(describePickup({ kind: 'piercing', full: false }, (_, en) => en), 'Piercing increased · Hits 3 targets');

@@ -16,6 +16,16 @@ test.beforeEach(async ({ page }) => {
   await page.clock.runFor(3200);
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
 });
+test('desktop hides touch buttons while keyboard pause and shockwave remain usable', async ({ page }) => {
+  await expect(page.getByRole('button', { name: '暂停', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: '冲击波', exact: true })).toHaveCount(0);
+  await page.keyboard.press('p');
+  await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
+  await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+  await page.keyboard.press('Space');
+  await page.clock.runFor(100);
+  await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
+});
 test('fresh Space works after its release happened outside the game window', async ({ page }) => {
   await page.keyboard.press('p');
   await page.keyboard.down('Space');

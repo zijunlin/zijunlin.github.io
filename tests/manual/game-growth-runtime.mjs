@@ -97,7 +97,7 @@ try {
   await phase('setup');
   await page.waitForFunction(() => window.battleSnapshot.ended || (
     window.battleSnapshot.trajectoryCount === 24 && window.battleSnapshot.fireInterval === .11 &&
-    window.battleSnapshot.piercing && window.battleSnapshot.ship.movementSpeed === 570
+    window.battleSnapshot.piercing && window.battleSnapshot.ship.movementSpeed === 690
   ), null, { timeout: 180000, polling: 500 });
   report.setup = await page.evaluate(() => ({ state: window.battleSnapshot, pickups: window.pickupHistory }));
   if (report.setup.state.ended) throw new Error('Legitimate pickup setup ended before maximum growth');

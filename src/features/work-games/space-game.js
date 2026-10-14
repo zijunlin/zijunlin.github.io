@@ -30,9 +30,10 @@ export function startGame({ presentation, leave, text }) {
   }, reduced });
   const view = mountBattleView(visuals, scale);
   const controls = document.createElement('div'); controls.className = 'game-controls';
-  const pauseButton = document.createElement('button'), waveButton = document.createElement('button');
-  pauseButton.className = 'game-pause'; waveButton.className = 'game-wave';
-  controls.append(pauseButton, waveButton); panel.append(controls);
+  const waveButton = document.createElement('button');
+  waveButton.className = 'game-wave';
+  controls.append(waveButton);
+  if (touch) panel.append(controls);
   const surface = document.createElement('div'); surface.className = 'game-touch'; surface.setAttribute('aria-hidden', 'true');
   panel.prepend(surface);
   let drag, target;
@@ -58,7 +59,6 @@ export function startGame({ presentation, leave, text }) {
     arena = null;
     status.textContent = phase === 'opening' ? text('正在集结', 'Assembling') : phase === 'battle' ? text('星际生存', 'Space survival') : text('本局结束', 'Run complete');
     instructions.textContent = touch ? text('拖动移动 · 自动开火', 'Drag to move · Auto fire') : text('WASD / 方向键移动 · P 暂停 · Esc 结束', 'WASD / Arrows to move · P to pause · Esc to end');
-    pauseButton.textContent = text('暂停', 'Pause');
     waveButton.textContent = text('冲击波', 'Shockwave');
     updateScore();
     battle?.resize(bounds());
@@ -177,7 +177,6 @@ export function startGame({ presentation, leave, text }) {
     else if (battle) { gamePerformance.advance(0, bounds(), battle.state); view.draw(battle.state, bounds()); }
   }, { signal });
   screen.orientation?.addEventListener('change', pause, { signal });
-  pauseButton.addEventListener('click', pause, { signal });
   waveButton.addEventListener('click', () => { if (phase === 'battle' && !paused) shockwavePending = true; }, { signal });
   // Observe fingers on controls too: a second contact cancels the pending drag.
   panel.addEventListener('pointerdown', event => {

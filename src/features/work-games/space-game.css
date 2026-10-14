@@ -5,7 +5,8 @@
 .space-game button { pointer-events:auto; color:#e0f1f4; background:#183039; border:1px solid #617b82; padding:8px 16px; border-radius:8px; cursor:pointer; margin:6px 8px 0 0; }
 .space-game button:focus-visible { outline:2px solid #d4fafb; outline-offset:3px; }
 .game-satellite { position:absolute; left:0; top:0; transform-origin:center; pointer-events:none; }
-.game-ship { position:absolute; left:0; top:0; width:26.4px; height:39.6px; overflow:visible; filter:drop-shadow(0 0 8px #8de9f0); }
+.game-ship { position:absolute; left:0; top:0; width:26.4px; height:39.6px; }
+.game-ship-art { display:block; width:100%; height:100%; transform-origin:50% 50%; overflow:visible; filter:drop-shadow(0 0 8px #8de9f0); }
 .game-modal { pointer-events:auto; color:#dcebed; background:#111b24; border:1px solid #78949e; border-radius:18px; padding:28px; max-width:min(440px,85vw); }
 .game-modal::backdrop { background:#02070b88; }
 .game-effects { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
@@ -17,7 +18,6 @@
 .game-visuals { position:absolute; inset:0; transform-origin:0 0; pointer-events:none; }
 .game-touch { position:absolute; inset:0; pointer-events:auto; touch-action:none; user-select:none; }
 .game-controls { position:absolute; inset:0; pointer-events:none; }
-.game-pause { position:absolute; top:var(--game-hud-top); right:max(12px, env(safe-area-inset-right)); min-height:44px; }
 .game-wave { position:absolute; right:max(12px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); min-height:48px; touch-action:manipulation; }
 .space-game button:disabled { opacity:.45; }
 @media (max-width: 799px), (max-height: 599px) {
