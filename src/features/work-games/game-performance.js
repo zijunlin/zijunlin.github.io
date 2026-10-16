@@ -49,11 +49,10 @@ function mountArtwork(graphics, captures, reduced, scale, onFrame, effects) {
         appearance: { ...appearance, pose: { ...appearance.pose,
           translateX: appearance.pose.translateX * shrink } } });
     });
-    // Snap only the displayed top-left after the hull offset and world scale.
-    // Physics, satellites and collision continue to retain fractional positions.
-    const pixelsPerUnit = (window.devicePixelRatio || 1) * scale;
-    ship.x = Math.round((shipX - shipAppearance.width / 2) * pixelsPerUnit) / pixelsPerUnit * scale;
-    ship.y = Math.round((shipY - shipAppearance.height * 5 / 12) * pixelsPerUnit) / pixelsPerUnit * scale;
+    // Retain the original CSS position. The draw layer snaps against the actual
+    // framebuffer, including budget-limited density and paused resize repaints.
+    ship.x = (shipX - shipAppearance.width / 2) * scale;
+    ship.y = (shipY - shipAppearance.height * 5 / 12) * scale;
     ship.opacity = ease((time - 1.25) / .55);
   }
   function returning(progress, startTime, orbitTime, bounds, center, targets) {

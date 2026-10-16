@@ -105,15 +105,17 @@ export function createShipLayer(gl, resources, scene) {
     draw(frame) {
       const ship = scene();
       if (!ship || ship.opacity <= 0) return;
+      const xRatio = frame.width / frame.cssWidth, yRatio = frame.height / frame.cssHeight;
+      const x = Math.round(ship.x * xRatio) / xRatio, y = Math.round(ship.y * yRatio) / yRatio;
       gl.viewport(0, 0, frame.width, frame.height);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       for (const program of [glow, hull]) {
         const u = use(program, quad);
         gl.uniform2f(u.viewport, frame.cssWidth, frame.cssHeight);
-        gl.uniform2f(u.shipOrigin, ship.x, ship.y);
+        gl.uniform2f(u.shipOrigin, x, y);
         gl.uniform1f(u.worldScale, ship.scale); gl.uniform1f(u.opacity, ship.opacity);
         if (program === glow) { gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, textures[0]); gl.uniform1i(u.image, 0); }
-        else { gl.uniform1f(u.edge, .5 / (ship.scale * frame.pixelRatio * artworkScale)); gl.uniform1f(u.mask, 0); }
+        else { gl.uniform1f(u.edge, .5 / (ship.scale * Math.min(xRatio, yRatio) * artworkScale)); gl.uniform1f(u.mask, 0); }
         gl.drawArrays(gl.TRIANGLES, 0, 6);
         gl.disableVertexAttribArray(attributes.get(program));
       }

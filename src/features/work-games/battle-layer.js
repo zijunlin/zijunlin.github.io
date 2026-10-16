@@ -75,7 +75,8 @@ export function createBattleLayer(gl, resources, scene) {
         if (radial.w >= 0.) alpha *= clamp((distance - radial.w) / feather + .5, 0., 1.);
       }
       if (radial.z < 0.) {
-        vec2 extent = clamp((vec2(radial.w) - radial.xy) / feather + .5, 0., 1.) - clamp((-vec2(radial.w) - radial.xy) / feather + .5, 0., 1.);
+        vec2 halfSize = vec2(-radial.z, radial.w);
+        vec2 extent = clamp((halfSize - radial.xy) / feather + .5, 0., 1.) - clamp((-halfSize - radial.xy) / feather + .5, 0., 1.);
         alpha = extent.x * extent.y;
       }
       gl_FragColor = vec4(ink.rgb, ink.a * alpha);
@@ -149,13 +150,25 @@ export function createBattleLayer(gl, resources, scene) {
     const corners = [[-extent, -extent], [extent, -extent], [extent, extent], [-extent, extent]];
     for (const i of [0, 1, 2, 0, 2, 3]) { const [dx, dy] = corners[i]; vertex([particle.x + dx, particle.y + dy], color, 1, [dx, dy, -1, 1]); }
   }
+  function piercingShot(bullet) {
+    const speed = Math.hypot(bullet.vx, bullet.vy), dx = speed ? bullet.vx / speed : 0, dy = speed ? bullet.vy / speed : -1;
+    // Flat-ended 10 × 3 rectangle, centered two units behind the projectile.
+    // Signed half-length selects analytic rectangular coverage, also used by
+    // particles. Keep this quad in the original stream to preserve draw order.
+    const length = 5 + feather / 2, width = 1.5 + feather / 2;
+    const corners = [[-length, -width], [length, -width], [length, width], [-length, width]];
+    for (const i of [0, 1, 2, 0, 2, 3]) {
+      const [along, across] = corners[i];
+      vertex([bullet.x + dx * (along - 2) - dy * across, bullet.y + dy * (along - 2) + dx * across],
+        rgba('#d2a7ff'), 1, [along, across, -5, 1.5]);
+    }
+  }
   const painter = { fill, stroke, circle };
   function artwork(state, bounds) {
     for (const wave of state.shockwaves) circle(wave.x, wave.y, wave.radius, '#9be8ff', 3);
     for (const bullet of state.bullets) {
       if (!bullet.piercing) { circle(bullet.x, bullet.y, bullet.radius, '#c9f5fa'); continue; }
-      const speed = Math.hypot(bullet.vx, bullet.vy), dx = speed ? bullet.vx / speed : 0, dy = speed ? bullet.vy / speed : -1;
-      stroke([[bullet.x - dx * 7, bullet.y - dy * 7], [bullet.x + dx * 3, bullet.y + dy * 3]], '#d2a7ff', 3);
+      piercingShot(bullet);
     }
     for (const obstacle of state.obstacles) {
       if (obstacle.warning > 0) {

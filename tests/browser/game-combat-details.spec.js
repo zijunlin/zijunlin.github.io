@@ -127,8 +127,8 @@ test('overlapping translucent obstacles accumulate opacity in the shared image',
   expect(doubled, 'the overlap visibly contains both translucent objects').toBeGreaterThan(25);
 });
 
-test.describe('directional detail at DPR2', () => {
-  test.use({ deviceScaleFactor: 2 });
+for (const [width, height, density] of [[1280, 800, 2], [390, 844, 1], [390, 844, 3]]) test.describe(`directional detail ${width}x${height} DPR${density}`, () => {
+  test.use({ viewport: { width, height }, deviceScaleFactor: density });
   test('piercing bolts retain their narrow elongated direction after actual pickup', async ({ page }, info) => {
     await start(page, '() => .5');
     let ready;
@@ -147,7 +147,7 @@ test.describe('directional detail at DPR2', () => {
     await page.clock.runFor(80);
     const state = await snapshot(page), bullet = state.bullets.find(b => b.piercing && Math.abs(b.vx)>20 && b.y>150 && b.y<state.ship.y-45);
     expect(bullet, 'an oblique forward piercing ray is visibly inside the arena').toBeTruthy();
-    const frame = PNG.sync.read(await page.screenshot({ path:info.outputPath('oblique-piercing.png') })), ratio=frame.width/1280;
+    const frame = PNG.sync.read(await page.screenshot({ path:info.outputPath('oblique-piercing.png') })), ratio=frame.width/width * (width < 800 ? .5 : 1);
     const speed=Math.hypot(bullet.vx,bullet.vy), dx=bullet.vx/speed, dy=bullet.vy/speed, points=[];
     for (let y=Math.floor((bullet.y-12)*ratio); y<(bullet.y+12)*ratio; y++) for (let x=Math.floor((bullet.x-8)*ratio); x<(bullet.x+8)*ratio; x++) {
       const px=(x+.5)/ratio-bullet.x, py=(y+.5)/ratio-bullet.y, along=px*dx+py*dy, across=px*-dy+py*dx;
@@ -155,12 +155,13 @@ test.describe('directional detail at DPR2', () => {
       const at=(y*frame.width+x)*4;
       if ([210,167,255].every((v,c)=>Math.abs(frame.data[at+c]-v)<14)) points.push({x:px,y:py,along,across});
     }
-    expect(points.length).toBeGreaterThan(20);
+    expect(points.length).toBeGreaterThan(Math.max(2, Math.floor(5 * ratio * ratio)));
     const extent=key=>Math.max(...points.map(p=>p[key]))-Math.min(...points.map(p=>p[key]));
-    expect(extent('along')).toBeGreaterThan(8); expect(extent('across')).toBeLessThan(3.5);
+    expect(extent('along')).toBeGreaterThan(10 - 4 / ratio); expect(extent('across')).toBeLessThan(3.5);
+    expect(extent('along')).toBeGreaterThan(extent('across') * 2);
     const mean=key=>points.reduce((sum,p)=>sum+p[key],0)/points.length, mx=mean('x'),my=mean('y');
     const slope=points.reduce((sum,p)=>sum+(p.x-mx)*(p.y-my),0)/points.reduce((sum,p)=>sum+(p.y-my)**2,0);
-    expect(Math.abs(slope-bullet.vx/bullet.vy), 'visible bolt axis follows its oblique flight, not a vertical icon').toBeLessThan(.05);
+    expect(Math.abs(slope-bullet.vx/bullet.vy), 'visible bolt axis follows its oblique flight, not a vertical icon').toBeLessThan(.1 / ratio);
   });
 });
 

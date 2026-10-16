@@ -3,6 +3,7 @@ import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 import { writeFileSync } from 'node:fs';
 import { startCombat } from '../helpers/combat-scenario.js';
+import { advanceUntil } from '../helpers/game-scenario.js';
 import { observeGameDrawing, drawnShipBox, expectSatellites } from '../helpers/game-drawing.js';
 
 const cases = [
@@ -94,7 +95,11 @@ for (const c of cases) test.describe(`${c.width}x${c.height} DPR${c.dpr} ${c.mot
     expect(Math.max(...green.map(p=>p.x))-Math.min(...green.map(p=>p.x))+1/c.dpr).toBeGreaterThan(4*scale);
 
     await page.keyboard.down('ArrowUp');await page.clock.runFor(250);await page.keyboard.up('ArrowUp');
-    await page.keyboard.down('ArrowRight');await page.clock.runFor(17);await page.keyboard.up('ArrowRight');
+    await page.keyboard.down('ArrowRight');
+    try {
+      await advanceUntil(page, async () => !Number.isInteger((await state(page)).ship.x),
+        { description: 'a fractional simulation position under held input', timeout: 200, step: 8 });
+    } finally { await page.keyboard.up('ArrowRight'); }
     const moving=await state(page);expect(Number.isInteger(moving.ship.x)).toBe(false);
     await shots(page,info,scale,'fractional-shots');
     await page.keyboard.press('Space');await page.clock.runFor(80);
