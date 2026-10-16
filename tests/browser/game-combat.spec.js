@@ -1,13 +1,14 @@
+import { observeGameDrawing, drawnShipBox } from '../helpers/game-drawing.js';
 import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(60000);
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(observeGameDrawing);
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
-  await page.clock.install();
+  await page.clock.install({ time: new Date('2026-10-14T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-14T00:00:00Z'));
   await page.goto('/');
   await expect(page.locator('#world-entry')).toBeVisible();
   await page.clock.runFor(10100);
@@ -17,11 +18,12 @@ test.beforeEach(async ({ page }) => {
 });
 test('movement, pause, results and replay preserve the site and reset the run', async ({ page }) => {
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
-  const before = await page.locator('.game-ship').boundingBox();
+  const before = await drawnShipBox(page);
   await page.keyboard.down('ArrowLeft'); await page.clock.runFor(500); await page.keyboard.up('ArrowLeft');
-  const after = await page.locator('.game-ship').boundingBox();
-  expect(before.x - after.x).toBeGreaterThan(180);
-  expect(before.x - after.x).toBeLessThan(210);
+  const after = await drawnShipBox(page);
+  // The current base speed is 390 CSS px/s: half a second covers 195 px,
+  // allowing one rendered simulation frame at each input boundary.
+  expect(Math.abs((before.x - after.x) - 195)).toBeLessThan(15);
   await page.keyboard.press('p');
   await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
   const frozen = await page.locator('.game-score').textContent();
@@ -70,14 +72,14 @@ test('ship reaches the navigation and viewport edges and travels beneath the HUD
     await page.keyboard.down(key); await page.clock.runFor(duration); await page.keyboard.up(key);
   };
   await move('ArrowLeft', 3000);
-  let ship = await page.locator('.game-ship').boundingBox();
+  let ship = await drawnShipBox(page);
   expect(ship.x).toBeCloseTo(0, 1);
   await move('ArrowUp', 3000);
-  ship = await page.locator('.game-ship').boundingBox();
+  ship = await drawnShipBox(page);
   const header = await page.locator('.site-header').boundingBox();
   expect(ship.y).toBeCloseTo(header.y + header.height, 1);
   await move('ArrowRight', 250);
-  ship = await page.locator('.game-ship').boundingBox();
+  ship = await drawnShipBox(page);
   const hud = await page.locator('.game-hud').boundingBox();
   expect(ship.x).toBeGreaterThan(hud.x);
   expect(ship.y + ship.height).toBeGreaterThan(hud.y);
@@ -85,7 +87,7 @@ test('ship reaches the navigation and viewport edges and travels beneath the HUD
   await expect(page.locator('.game-hud')).toHaveCSS('pointer-events', 'none');
   // Hit-test the overlapping paint layers with pointer events temporarily enabled.
   const aboveShip = await page.evaluate(({ x, y }) => {
-    const nodes = [...document.querySelectorAll('.game-hud, .game-ship, .game-effects, .game-satellite')];
+    const nodes = [...document.querySelectorAll('.game-hud, #shader-canvas, .game-effects')];
     const old = nodes.map(node => node.style.pointerEvents);
     nodes.forEach(node => { node.style.pointerEvents = 'auto'; });
     const top = document.elementFromPoint(x, y);
@@ -96,11 +98,12 @@ test('ship reaches the navigation and viewport edges and travels beneath the HUD
   expect(aboveShip).toBe(true);
   await page.screenshot({ path: '.scratch/game-entry-and-boundaries/hud-overlap.png' });
   await move('ArrowRight', 5000);
-  ship = await page.locator('.game-ship').boundingBox();
-  expect(ship.x + ship.width).toBeCloseTo(page.viewportSize().width, 1);
+  ship = await drawnShipBox(page);
+  const displayTolerance = .5 / await page.evaluate(() => devicePixelRatio) + 1e-6;
+  expect(Math.abs(ship.x + ship.width - page.viewportSize().width)).toBeLessThanOrEqual(displayTolerance);
   await move('ArrowDown', 4000);
-  ship = await page.locator('.game-ship').boundingBox();
-  expect(ship.y + ship.height).toBeCloseTo(page.viewportSize().height, 1);
+  ship = await drawnShipBox(page);
+  expect(Math.abs(ship.y + ship.height - page.viewportSize().height)).toBeLessThanOrEqual(displayTolerance);
 });
 
 test('Space releases once, pause discards input, and replay restores the reserve', async ({ page }) => {

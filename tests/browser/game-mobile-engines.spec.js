@@ -1,18 +1,14 @@
+import { observeGameDrawing, drawnShipBox } from '../helpers/game-drawing.js';
 import { test, expect } from '@playwright/test';
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 test.setTimeout(90000);
 test.beforeEach(async ({ page }) => {
+  await page.addInitScript(observeGameDrawing);
   await page.clock.install({ time: new Date('2026-10-13T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-13T00:00:00Z'));
 });
-async function ready(page, background = false) {
-  if (!background) await page.addInitScript(() => {
-    const get = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) {
-      return this.id === 'shader-canvas' ? null : get.apply(this, args);
-    };
-  });
+async function ready(page) {
   await page.goto('/?seed=0');
   await expect(page.locator('#world-entry')).toBeVisible();
 }
@@ -40,8 +36,7 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     await enter(page);
     for (const name of ['冲击波']) await insideViewport(page, page.getByRole('button', { name, exact: true }));
     await page.screenshot({ path: info.outputPath('portrait.png') });
-    const ship = page.locator('.game-ship');
-    const before = await ship.boundingBox();
+    const before = await drawnShipBox(page);
     // Mouse events exercise the shared relative-pointer path in WebKit;
     // they do not claim real iPhone touch-drag coverage.
     await page.mouse.move(100, 500);
@@ -49,7 +44,7 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     await page.mouse.move(160, 470);
     await page.clock.runFor(180);
     await page.mouse.up();
-    expect((await ship.boundingBox()).x).toBeGreaterThan(before.x + 20);
+    expect((await drawnShipBox(page)).x).toBeGreaterThan(before.x + 20);
     await page.getByRole('button', { name: '冲击波', exact: true }).tap();
     await page.clock.runFor(32);
     await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
@@ -61,12 +56,12 @@ for (const reducedMotion of ['no-preference', 'reduce']) {
     await page.clock.runFor(32);
     for (const name of ['冲击波']) await insideViewport(page, page.getByRole('button', { name, exact: true }));
     await page.screenshot({ path: info.outputPath('landscape.png') });
-    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
     await page.getByRole('button', { name: '结束本局', exact: true }).tap();
     await page.getByRole('button', { name: '再来一局', exact: true }).tap();
     await page.clock.runFor(32);
     await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
-    await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
     await page.getByRole('button', { name: '结束本局', exact: true }).tap();
     await page.getByRole('button', { name: '返回首页', exact: true }).tap();
     await page.clock.runFor(1800);
@@ -93,14 +88,14 @@ test('navigation cancels delayed mobile loading without a later takeover', async
 
 test('real background remains visible in portrait and landscape', async ({ page }, info) => {
   await page.clock.resume();
-  await ready(page, true);
+  await ready(page);
   await page.keyboard.press('Shift+G');
   await expect(page.locator('.space-game')).toBeVisible();
   await expect(page.getByRole('button', { name: '冲击波', exact: true })).toBeEnabled();
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await page.screenshot({ path: info.outputPath('background-portrait.png') });
   await page.setViewportSize({ width: 844, height: 390 });
   await page.getByRole('button', { name: '继续游戏', exact: true }).tap();
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await page.screenshot({ path: info.outputPath('background-landscape.png') });
 });

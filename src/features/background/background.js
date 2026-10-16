@@ -60,107 +60,80 @@ void main(){
  gl_FragColor=vec4(color,1.);
 }`;
 
-export function mountBackground(canvas, state) {
-  canvas.dataset.motion = 'static';
-  let gl, program, buffer;
-  const shaders = [];
-  let frame = 0;
-  let removeLifecycleListeners = () => {};
-  function fallback() {
-    cancelAnimationFrame(frame);
-    frame = 0;
-    removeLifecycleListeners();
-    canvas.dataset.motion = 'static';
-    canvas.hidden = true;
-    if (gl) {
-      if (buffer) gl.deleteBuffer(buffer);
-      if (program) gl.deleteProgram(program);
-    }
-  }
-
-  try {
-    gl = canvas.getContext('webgl', { alpha: false, antialias: false, depth: false, stencil: false });
-    if (!gl) return;
-    for (const [type, source] of [[gl.VERTEX_SHADER, vertexSource], [gl.FRAGMENT_SHADER, fragmentSource]]) {
-      const shader = gl.createShader(type);
-      if (!shader) throw new Error('Shader unavailable');
-      shaders.push(shader);
-      gl.shaderSource(shader, source);
-      gl.compileShader(shader);
-      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error('Shader compilation failed');
-    }
-    program = gl.createProgram();
-    if (!program) throw new Error('Program unavailable');
-    for (const shader of shaders) gl.attachShader(program, shader);
-    gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error('Shader link failed');
+// Background allocations and commands use the scene's context and scope.
+// Only this pass inherits the previous 960×600 / 30 Hz cost limit.
+export function createBackgroundPass(gl, resources, seed) {
+  const field = resources.program(vertexSource, fragmentSource);
+  const composite = resources.program(vertexSource, `precision mediump float;
+    uniform sampler2D background;
+    uniform vec2 resolution, scale, offset;
+    void main() {
+      vec2 uv = (gl_FragCoord.xy / resolution - .5) * scale + .5 - offset;
+      gl_FragColor = texture2D(background, uv);
+    }`);
+  const buffer = resources.buffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+  const texture = resources.texture();
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  const framebuffer = resources.framebuffer();
+  const fieldPosition = gl.getAttribLocation(field, 'position');
+  const compositePosition = gl.getAttribLocation(composite, 'position');
+  const fieldResolution = gl.getUniformLocation(field, 'resolution');
+  const fieldTime = gl.getUniformLocation(field, 'time');
+  const compositeResolution = gl.getUniformLocation(composite, 'resolution');
+  const compositeScale = gl.getUniformLocation(composite, 'scale');
+  const compositeOffset = gl.getUniformLocation(composite, 'offset');
+  gl.useProgram(field);
+  gl.uniform1f(gl.getUniformLocation(field, 'seed'), seed);
+  gl.useProgram(composite);
+  gl.uniform1i(gl.getUniformLocation(composite, 'background'), 0);
+  let width = 0, height = 0, lastDraw = -Infinity;
+  function triangle(program, position) {
     gl.useProgram(program);
-    buffer = gl.createBuffer();
-    if (!buffer) throw new Error('Buffer unavailable');
     gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
-    const position = gl.getAttribLocation(program, 'position');
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    const resolution = gl.getUniformLocation(program, 'resolution');
-    const time = gl.getUniformLocation(program, 'time');
-    gl.uniform1f(gl.getUniformLocation(program, 'seed'), state.backgroundSeed);
-    let elapsed = 0, last = performance.now();
-    let pageActive = true;
-    function canRun() {
-      return pageActive && !document.hidden;
-    }
-    function draw(now) {
-      frame = 0;
-      if (!canRun()) return;
-      try {
-        const delta = now - last;
-        if (delta >= 1000 / 30) {
-          last = now;
-          elapsed += Math.min(delta / 1000, 0.1) * 0.8 * (location.hash === '#work/platform' ? 0.2 : 1);
-          const ratio = Math.min(1, 960 / innerWidth, 600 / innerHeight);
-          const width = Math.max(1, Math.round(innerWidth * ratio));
-          const height = Math.max(1, Math.round(innerHeight * ratio));
-          if (canvas.width !== width || canvas.height !== height) {
-            canvas.width = width;
-            canvas.height = height;
-          }
-          gl.viewport(0, 0, width, height);
-          gl.uniform2f(resolution, width, height);
-          gl.uniform1f(time, elapsed);
-          gl.drawArrays(gl.TRIANGLES, 0, 3);
-          if (gl.getError() !== gl.NO_ERROR || gl.isContextLost()) throw new Error('Rendering unavailable');
-          canvas.hidden = false;
-        }
-        frame = requestAnimationFrame(draw);
-      } catch { fallback(); }
-    }
-    function syncVisibility() {
-      cancelAnimationFrame(frame);
-      frame = 0;
-      // Reset only the frame clock: preserve both the field and elapsed motion.
-      last = performance.now();
-      canvas.dataset.motion = canRun() ? 'running' : 'paused';
-      if (canRun()) frame = requestAnimationFrame(draw);
-    }
-    function leavePage() {
-      pageActive = false;
-      syncVisibility();
-    }
-    function returnToPage() {
-      pageActive = true;
-      syncVisibility();
-    }
-    document.addEventListener('visibilitychange', syncVisibility);
-    window.addEventListener('pagehide', leavePage);
-    window.addEventListener('pageshow', returnToPage);
-    removeLifecycleListeners = () => {
-      document.removeEventListener('visibilitychange', syncVisibility);
-      window.removeEventListener('pagehide', leavePage);
-      window.removeEventListener('pageshow', returnToPage);
-    };
-    canvas.addEventListener('webglcontextlost', fallback, { once: true });
-    syncVisibility();
-  } catch { fallback(); }
-  finally { for (const shader of shaders) gl.deleteShader(shader); }
+  }
+  return {
+    resize(cssWidth, cssHeight) {
+      const ratio = Math.min(1, 960 / cssWidth, 600 / cssHeight);
+      const nextWidth = Math.max(1, Math.round(cssWidth * ratio));
+      const nextHeight = Math.max(1, Math.round(cssHeight * ratio));
+      if (width === nextWidth && height === nextHeight) return;
+      width = nextWidth; height = nextHeight;
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, width, height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
+      if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) !== gl.FRAMEBUFFER_COMPLETE) throw new Error('Background target unavailable');
+      lastDraw = -Infinity;
+    },
+    draw({ now, elapsed, width: outputWidth, height: outputHeight, cssWidth, cssHeight }, offset) {
+      gl.disable(gl.BLEND);
+      gl.activeTexture(gl.TEXTURE0);
+      if (now - lastDraw >= 1000 / 30) {
+        lastDraw = now;
+        gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+        gl.viewport(0, 0, width, height);
+        triangle(field, fieldPosition);
+        gl.uniform2f(fieldResolution, width, height);
+        gl.uniform1f(fieldTime, elapsed);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      }
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.viewport(0, 0, outputWidth, outputHeight);
+      triangle(composite, compositePosition);
+      gl.bindTexture(gl.TEXTURE_2D, texture);
+      gl.uniform2f(compositeResolution, outputWidth, outputHeight);
+      // The old 3px overscan and 2px parallax apply only to the cached field.
+      gl.uniform2f(compositeScale, cssWidth / (cssWidth + 6), cssHeight / (cssHeight + 6));
+      gl.uniform2f(compositeOffset, offset.x / (cssWidth + 6), -offset.y / (cssHeight + 6));
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    },
+  };
 }

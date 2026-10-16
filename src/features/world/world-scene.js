@@ -1,6 +1,16 @@
+import { mountWorldFallback } from './world-fallback.js';
 import { localize } from '../../i18n/index.js';
 // Keep visual assets within the world initialization boundary.
-export async function mountWorld(container, state) {
+export async function mountWorld(container, state, graphics) {
+  async function graphicsReady() {
+    if (graphics?.status === 'recovering') await new Promise(resolve => {
+      const unsubscribe = graphics.subscribe(status => {
+        if (status === 'recovering') return;
+        unsubscribe(); resolve();
+      });
+    });
+    return !graphics || graphics.available;
+  }
   const heading = document.createElement('div');
   heading.className = 'scene-heading';
   const eyebrow = document.createElement('p');
@@ -22,6 +32,19 @@ export async function mountWorld(container, state) {
   heading.append(eyebrow, title, metadata);
   localize(heading);
   container.replaceChildren(heading);
+  if (!await graphicsReady()) { mountWorldFallback(container); return; }
   const { mountWorldView } = await import('./world-view.js');
-  return mountWorldView(container, state);
+  if (!await graphicsReady()) { mountWorldFallback(container); return; }
+  try {
+    return await mountWorldView(container, state, graphics);
+  } catch (error) {
+    if (graphics?.status === 'recovering') {
+      await graphicsReady();
+      return mountWorld(container, state, graphics);
+    }
+    // Foreground allocation belongs to the same graphics availability boundary
+    // as the background. Keep the static home eligible for unavailable feedback.
+    if (!await graphicsReady()) { mountWorldFallback(container); return; }
+    throw error;
+  }
 }

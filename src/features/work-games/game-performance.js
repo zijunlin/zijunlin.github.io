@@ -1,35 +1,37 @@
+import { createOrbLayer } from '../scene/orb-layer.js';
+import { createBattleComposite } from './battle-composite.js';
+import { createShipLayer } from './ship-layer.js';
+import { returningOrbAppearance } from '../scene/orb-scene.js';
+import { shipAppearance } from './ship-appearance.js';
+
 const clamp = value => Math.max(0, Math.min(1, value));
 const blend = (from, to, progress) => from + (to - from) * progress;
 const ease = value => { const t = clamp(value); return t * t * (3 - 2 * t); };
 
 // Render the approved diamond formation using captured viewport coordinates.
-function mountArtwork(layer, captures, reduced) {
-  const satellites = captures.map(capture => {
-    const element = document.createElement('div');
-    element.className = 'game-satellite';
-    element.style.width = element.style.height = `${capture.size}px`;
-    element.append(capture.art);
-    layer.append(element);
-    return { element };
+function mountArtwork(graphics, captures, reduced, scale, onFrame, effects) {
+  const satellites = captures.map(capture => ({ ...capture, opacity: 1 }));
+  const appearances = captures.map(capture => capture.appearance);
+  const ship = { x: 0, y: 0, opacity: 0, scale };
+  let disposed = false;
+  const layer = graphics.addLayer((gl, resources) => {
+    const combat = createBattleComposite(gl, resources, effects);
+    const orbs = createOrbLayer(gl, resources, () => satellites);
+    const hull = createShipLayer(gl, resources, () => ship);
+    return { draw(frame) {
+      // Advance input, simulation and formation before submitting either visual.
+      if (frame.animated) onFrame(frame.elapsed * 1000);
+      if (disposed) return;
+      combat.draw(frame); orbs.draw(frame); hull.draw(frame);
+    } };
   });
-  const ship = document.createElement('div');
-  ship.classList.add('game-ship');
-  const hull = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  hull.classList.add('game-ship-art');
-  hull.setAttribute('viewBox', '-24 -30 48 72');
-  hull.innerHTML = '<path fill="#a7e9ed" d="M0-26 19 19 7 13 0 19-7 13-19 19Z"/><path fill="#163a49" d="M0-13 6 9 0 5-6 9Z"/><path fill="#e5ffff" d="M-2-6H2V3H-2Z"/><path fill="#8de9f080" d="M-5 18 0 34 5 18Z"/>';
-  ship.append(hull);
-  layer.append(ship);
-  let appearanceTime = -1, bank = 0, previousCenterX, previousMotionTime;
-  let bankFrom = 0, bankTarget = 0, bankElapsed = .18, renderedBank;
   function render(time, orbitTime, bounds, center, dt = 0) {
-    const appearanceChanged = time !== appearanceTime;
     const down = ease((time - 1.8) / 1.2);
     const cx = (bounds.left + bounds.right) / 2;
     const cy = Math.max(bounds.top + 62, (bounds.bottom + 20) * .44);
     const shipX = center?.x ?? cx;
     const shipY = center?.y ?? blend(cy, bounds.bottom - 45, down);
-    satellites.forEach(({ element }, i) => {
+    satellites.forEach((satellite, i) => {
       const capture = captures[i];
       const startAngle = Math.atan2(capture.y - cy, capture.x - cx);
       const angle = blend(startAngle, i * Math.PI / 2 - Math.PI / 2, ease(time / .85))
@@ -40,38 +42,27 @@ function mountArtwork(layer, captures, reduced) {
         : blend(capture.x, shipX + Math.cos(angle) * radius, gather);
       const y = reduced ? blend(capture.y, (center?.y ?? bounds.bottom - 45) + Math.sin(i * Math.PI / 2) * 30, ease(time / 3))
         : blend(capture.y, shipY + Math.sin(angle) * radius, gather);
-      element.style.transform = `translate(${x - capture.size / 2}px, ${y - capture.size / 2}px) scale(${blend(1, .65, ease(time / 1.7))})`;
-      if (appearanceChanged) capture.setEnvelopeScale(blend(1, .45, ease(time / 1.7)));
+      const shrink = blend(1, .65, ease(time / 1.7));
+      const appearance = appearances[i];
+      Object.assign(satellite, { x: x * scale, y: y * scale, size: capture.size * scale * shrink,
+        envelopeScale: blend(1, .45, ease(time / 1.7)),
+        appearance: { ...appearance, pose: { ...appearance.pose,
+          translateX: appearance.pose.translateX * shrink } } });
     });
-    // Compare completed simulation frames, not displacement / render dt:
-    // fixed simulation steps can otherwise vary the apparent speed each frame.
-    if (center && dt > 0 && orbitTime !== previousMotionTime) {
-      const direction = reduced || previousCenterX === undefined ? 0 : Math.sign(center.x - previousCenterX);
-      previousCenterX = center.x; previousMotionTime = orbitTime;
-      if (direction !== bankTarget) {
-        bankFrom = bank; bankTarget = direction; bankElapsed = 0;
-      }
-    }
-    bankElapsed = Math.min(.18, bankElapsed + dt);
-    bank = blend(bankFrom, bankTarget, ease(bankElapsed / .18));
-    // Only translation changes while cruising. The inner hull keeps its exact
-    // settled pose, avoiding repeated updates to its perspective/filter layer.
-    ship.style.transform = `translate(${shipX - 13.2}px, ${shipY - 16.5}px)`;
-    if (bank !== renderedBank) {
-      hull.style.transform = bank === 0 ? 'none' : `perspective(160px) rotateY(${bank * 28}deg)`;
-      renderedBank = bank;
-    }
-    if (appearanceChanged) ship.style.opacity = String(ease((time - 1.25) / .55));
-    appearanceTime = time;
+    // Snap only the displayed top-left after the hull offset and world scale.
+    // Physics, satellites and collision continue to retain fractional positions.
+    const pixelsPerUnit = (window.devicePixelRatio || 1) * scale;
+    ship.x = Math.round((shipX - shipAppearance.width / 2) * pixelsPerUnit) / pixelsPerUnit * scale;
+    ship.y = Math.round((shipY - shipAppearance.height * 5 / 12) * pixelsPerUnit) / pixelsPerUnit * scale;
+    ship.opacity = ease((time - 1.25) / .55);
   }
   function returning(progress, startTime, orbitTime, bounds, center, targets) {
     // Reverse the same gathering curve while unwinding the current battle orbit.
     const remaining = 1 - ease(progress);
     captures.forEach((capture, i) => {
-      if (capture.size !== targets[i].size) {
-        satellites[i].element.style.width = satellites[i].element.style.height = `${targets[i].size}px`;
-      }
-      Object.assign(capture, targets[i]);
+      const { appearance, ...geometry } = targets[i];
+      Object.assign(capture, geometry);
+      appearances[i] = returningOrbAppearance(capture.appearance, appearance, ease(progress));
     });
     const time = startTime * remaining;
     const cx = (bounds.left + bounds.right) / 2;
@@ -80,16 +71,16 @@ function mountArtwork(layer, captures, reduced) {
     render(time, orbitTime * remaining, bounds, center ? {
       x: blend(cx, center.x, remaining), y: blend(y, center.y, remaining),
     } : undefined);
-    ship.style.opacity = String((1 - ease(progress / .4)) * ease((startTime - 1.25) / .55));
+    ship.opacity = (1 - ease(progress / .4)) * ease((startTime - 1.25) / .55);
   }
-  return { render, returning, resetBank() { bank = bankFrom = bankTarget = 0; bankElapsed = .18; previousCenterX = previousMotionTime = undefined; }, remove() { satellites.forEach(({ element }) => element.remove()); ship.remove(); } };
+  return { render, returning, remove() { disposed = true; layer.dispose(); } };
 }
 
 // Own the complete visual handoff; the game supplies time, its arena and formation.
 // No independent animation loop or completion callback can outlive disposal.
-export function mountGamePerformance({ layer, presentation, reduced }) {
+export function mountGamePerformance({ presentation, reduced, scale = 1, onFrame, effects }) {
   const captures = presentation.satellites;
-  const artwork = mountArtwork(layer, captures, reduced);
+  const artwork = mountArtwork(presentation.graphics, captures, reduced, scale, onFrame, effects);
   let phase = 'opening', elapsed = 0, formation, returnElapsed = 0, disposed = false;
   return {
     advance(dt, bounds, battle) {
@@ -101,7 +92,6 @@ export function mountGamePerformance({ layer, presentation, reduced }) {
         if (progress === 1) phase = 'returned';
       } else if (phase !== 'returned') {
         if (battle) {
-          if (formation && battle.seconds < formation.seconds) artwork.resetBank();
           elapsed = 3;
           formation = { seconds: battle.seconds, ship: { ...battle.ship } };
         } else elapsed = Math.min(3, elapsed + dt);

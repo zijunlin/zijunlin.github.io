@@ -1,3 +1,5 @@
+import { observeGameDrawing, drawnShipBox } from '../helpers/game-drawing.js';
+test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
 import { observeCanvasColors } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -11,8 +13,6 @@ test('five independent pickup identities draw effects and transient feedback, pr
   page.setDefaultTimeout(15000);
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
   await observeCanvasColors(page, [[120, 244, 196], [111, 207, 255], [255, 187, 102], [255, 225, 120], [210, 167, 255]]);
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
@@ -98,7 +98,7 @@ test('five independent pickup identities draw effects and transient feedback, pr
   });
   expect(wavePixels).toBeGreaterThan(10);
   const hud = await page.locator('.game-hud').boundingBox();
-  const ship = await page.locator('.game-ship').boundingBox();
+  const ship = await drawnShipBox(page);
   expect(hud.x).toBeGreaterThanOrEqual(0);
   expect(hud.x + hud.width).toBeLessThanOrEqual(800);
   // HUD now overlays the arena; the ship may pass underneath it.
@@ -114,7 +114,7 @@ test('five independent pickup identities draw effects and transient feedback, pr
   await page.keyboard.press('Escape');
   await page.getByRole('button', { name: 'Return home', exact: true }).click();
   await page.clock.runFor(1700);
-  await expect(page.locator('.space-game, .game-effects, .game-satellite')).toHaveCount(0);
+  await expect(page.locator('.space-game, .game-effects')).toHaveCount(0);
   await page.locator('nav a[href="#work"]').click();
   await expect(page.locator('#work-panel-title')).toBeFocused();
 });

@@ -19,7 +19,7 @@ export function createTrailMetric(positionAt, period, scaleX, scaleY) {
     return Math.floor(turns) * circumference + lengths[index]
       + (lengths[index + 1] - lengths[index]) * (sample - index);
   }
-  function pointAtDistance(distance) {
+  function pointAtDistance(distance, point = []) {
     const wrapped = ((distance % circumference) + circumference) % circumference;
     let low = 0, high = SAMPLES;
     while (high - low > 1) {
@@ -28,18 +28,24 @@ export function createTrailMetric(positionAt, period, scaleX, scaleY) {
       else high = mid;
     }
     const fraction = (wrapped - lengths[low]) / (lengths[high] - lengths[low]);
-    return points[low].map((value, axis) => value + (points[high][axis] - value) * fraction);
+    for (let axis = 0; axis < 2; axis++) point[axis] = points[low][axis] + (points[high][axis] - points[low][axis]) * fraction;
+    return point;
   }
   return { circumference, distanceAtTime, pointAtDistance };
 }
 
-export function trailSegments(metric, elapsed, fraction, count = 128) {
+export function trailSegments(metric, elapsed, fraction, count = 128, segments = []) {
   const head = metric.distanceAtTime(elapsed);
   // At startup, only reveal the part the circle has actually travelled.
   const length = Math.min(head, metric.circumference * fraction);
-  return Array.from({ length: count }, (_, i) => ({
-    start: metric.pointAtDistance(head - length * i / count),
-    end: metric.pointAtDistance(head - length * (i + 1) / count),
-    opacity: .15 * (1 - i / (count - 1)),
-  }));
+  let start = metric.pointAtDistance(head, segments[0]?.start);
+  for (let i = 0; i < count; i++) {
+    const segment = segments[i] ??= {};
+    segment.end = metric.pointAtDistance(head - length * (i + 1) / count, segment.end);
+    segment.start = start;
+    segment.opacity = .15 * (1 - i / (count - 1));
+    start = segment.end;
+  }
+  segments.length = count;
+  return segments;
 }

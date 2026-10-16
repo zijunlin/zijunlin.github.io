@@ -53,12 +53,12 @@ for (const failure of ['unavailable', 'throws', 'compile', 'link']) {
   });
 }
 
-test('fixed entry seeds reproduce the visible field and different seeds vary it', async ({ browser }) => {
+test('fixed entry seeds reproduce the visible field and different seeds vary it', async ({ browser, baseURL }) => {
   async function capture(seed) {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
     await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
-    await page.goto(`http://127.0.0.1:4173/?seed=${seed}`);
+    await page.goto(`${baseURL}/?seed=${seed}`);
     await page.clock.runFor(100);
     await expect(page.locator('#shader-canvas')).toBeVisible();
     const result = await backgroundFrame(page);

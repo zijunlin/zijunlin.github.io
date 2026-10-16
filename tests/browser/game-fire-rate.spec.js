@@ -1,3 +1,5 @@
+import { observeGameDrawing } from '../helpers/game-drawing.js';
+test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
 import { waitForCanvasColor, moveUntilFeedback } from '../helpers/game-scenario.js';
 import { forwardFanLanes } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
@@ -6,8 +8,6 @@ test.setTimeout(150000);
 test('independent fire-rate pickup shows transient feedback and preserves the fan through pause and language changes', async ({ page }) => {
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));

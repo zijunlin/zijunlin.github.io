@@ -1,14 +1,13 @@
+import { observeGameDrawing, drawnShipBox, expectSatellites } from '../helpers/game-drawing.js';
+test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
 import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(90000);
 for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
   test(`complete game journey at ${viewport.width}x${viewport.height}`, async ({ page }) => {
     await page.setViewportSize(viewport);
-    await page.addInitScript(() => {
-      const context = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
-    });
-    await page.clock.install();
+    await page.clock.install({ time: new Date('2026-10-14T00:00:00Z') });
+  await page.clock.pauseAt(new Date('2026-10-14T00:00:00Z'));
     await page.goto('/');
     await expect(page.locator('#world-entry')).toBeVisible();
     await page.evaluate(() => {
@@ -30,7 +29,7 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
     await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
     expect(await page.locator('.site-header').boundingBox()).toEqual(header);
     const gameFrames = await page.evaluate(() => window.pendingFrames());
-    expect(gameFrames).toBeGreaterThan(baselineFrames);
+    expect(gameFrames).toBe(baselineFrames);
     for (let run = 0; run < (viewport.width === 1280 ? 10 : 1); run++) {
       await page.keyboard.down('ArrowRight'); await page.clock.runFor(160); await page.keyboard.press('p');
       await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
@@ -40,9 +39,9 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
       await expect(page.getByRole('dialog', { name: '本局结束' })).toBeVisible();
       await page.getByRole('button', { name: '再来一局', exact: true }).click();
       await expect(page.locator('.game-score')).toHaveText('分数: 0 · 存活: 0.0s');
-      const resetPosition = await page.locator('.game-ship').boundingBox();
+      const resetPosition = await drawnShipBox(page);
       await page.clock.runFor(320);
-      expect((await page.locator('.game-ship').boundingBox()).x).toBe(resetPosition.x);
+      expect((await drawnShipBox(page)).x).toBe(resetPosition.x);
       await page.keyboard.up('ArrowRight');
       expect(await page.evaluate(() => window.pendingFrames())).toBe(gameFrames);
       const visibleShots = await page.locator('.game-effects').evaluate(canvas => {
@@ -67,7 +66,7 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
       expect(visibleShots).toBe(10);
       await expect(page.locator('.game-score')).toContainText('存活: 0.3s');
       await expect(page.locator('.game-effects')).toHaveCount(1);
-      await expect(page.locator('.game-satellite')).toHaveCount(4);
+      await expectSatellites(page);
     }
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: '返回首页', exact: true }).click();

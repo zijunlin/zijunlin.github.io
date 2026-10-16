@@ -1,11 +1,9 @@
+import { observeGameDrawing, drawnShipBox } from '../helpers/game-drawing.js';
 import { test, expect } from '@playwright/test';
 
 test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const get = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (kind, ...args) { return kind === '2d' ? get.call(this, kind, ...args) : null; };
-  });
+  await page.addInitScript(observeGameDrawing);
   await page.clock.install({ time: new Date('2026-10-13T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-10-13T00:00:01Z'));
   await page.goto('/');
@@ -17,7 +15,9 @@ async function enter(page) {
   await page.clock.runFor(3100);
 }
 async function position(page) {
-  return page.locator('.game-ship').evaluate(ship => { const m = new DOMMatrix(getComputedStyle(ship).transform); return { x: m.m41, y: m.m42 }; });
+  const box = await drawnShipBox(page);
+  const scale = await page.evaluate(() => window.gameDrawing.ship.scale);
+  return { x: box.x / scale, y: box.y / scale };
 }
 const fingers = new WeakMap();
 async function finger(page, type, x, y) {
@@ -46,7 +46,7 @@ test('relative drag, release, shockwave, pause, height resize and orientation', 
   await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
   await page.setViewportSize({ width: 390, height: 760 });
   await expect(page.getByRole('dialog')).toHaveCount(0);
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await expect(page.getByRole('dialog', { name: '游戏已暂停' })).toBeVisible();
   await page.getByRole('button', { name: '继续游戏', exact: true }).tap();
   await page.setViewportSize({ width: 844, height: 390 });
@@ -54,13 +54,13 @@ test('relative drag, release, shockwave, pause, height resize and orientation', 
   await page.getByRole('button', { name: '继续游戏', exact: true }).tap();
   await page.clock.runFor(32);
   await page.screenshot({ path: '.scratch/mobile-game-landscape.png' });
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await page.getByRole('button', { name: '结束本局', exact: true }).tap();
   await expect(page.getByRole('dialog', { name: '本局结束' })).toBeVisible();
   await page.getByRole('button', { name: '再来一局', exact: true }).tap();
   await page.clock.runFor(32);
   await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await page.getByRole('button', { name: '结束本局', exact: true }).tap();
   await page.getByRole('button', { name: '返回首页', exact: true }).tap();
   await page.clock.runFor(1800);
@@ -125,7 +125,7 @@ test('dragging beyond the ship edge does not delay an immediate reversal', async
   await finger(page, 'touchStart', 350, 500);
   await finger(page, 'touchMove', 10, 500);
   await page.clock.runFor(1100);
-  const edge = await page.locator('.game-ship').boundingBox();
+  const edge = await drawnShipBox(page);
   expect(edge.x).toBeGreaterThanOrEqual(-1);
   expect(edge.x).toBeLessThan(2);
   // The extra drag beyond the reachable edge must not accumulate as a target
@@ -134,7 +134,7 @@ test('dragging beyond the ship edge does not delay an immediate reversal', async
   await page.clock.runFor(300);
   await finger(page, 'touchEnd');
   await page.clock.runFor(400);
-  const reversed = await page.locator('.game-ship').boundingBox();
+  const reversed = await drawnShipBox(page);
   expect(reversed.x - edge.x).toBeGreaterThan(28);
   expect(reversed.x - edge.x).toBeLessThan(32);
 });

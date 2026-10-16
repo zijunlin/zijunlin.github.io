@@ -1,5 +1,5 @@
-// Prepare site artwork once; the game owns its placement and animation clock.
-export function prepareHomeGame(scene, world) {
+// Hand off scene values once; renderers own artwork and the game owns its clock.
+export function prepareHomeGame(scene, world, graphics) {
   const heading = scene.querySelector('.scene-heading');
   const visibility = heading.style.visibility;
   const captures = world.takeOver();
@@ -11,29 +11,12 @@ export function prepareHomeGame(scene, world) {
     world.restore();
     heading.style.visibility = visibility;
   };
-  try {
-    const satellites = captures.map(capture => {
-      const { art } = capture;
-      art.style.width = '100%'; art.style.height = 'auto';
-      art.style.transformOrigin = '50% 50%';
-      const svg = art.querySelector('svg');
-      svg.style.width = '100%'; svg.style.height = 'auto';
-      const halo = art.querySelector('.orb-halo');
-      const envelope = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      halo.before(envelope); envelope.append(halo);
-      return {
-        ...capture,
-        setEnvelopeScale(scale) {
-          envelope.setAttribute('transform', `translate(100 100) scale(${scale}) translate(-100 -100)`);
-        },
-      };
-    });
-    return {
-      satellites,
-      hudTop: 'calc(var(--header-height) + 10px)',
-      getBounds: () => ({ left: 0, right: innerWidth, top: document.querySelector('.site-header').getBoundingClientRect().bottom, bottom: innerHeight }),
-      returnTargets: () => world.returnTargets(),
-      dispose,
-    };
-  } catch (error) { dispose(); throw error; }
+  return {
+    satellites: captures,
+    graphics,
+    hudTop: 'calc(var(--header-height) + 10px)',
+    getBounds: () => ({ left: 0, right: innerWidth, top: document.querySelector('.site-header').getBoundingClientRect().bottom, bottom: innerHeight }),
+    returnTargets: () => world.returnTargets(),
+    dispose,
+  };
 }

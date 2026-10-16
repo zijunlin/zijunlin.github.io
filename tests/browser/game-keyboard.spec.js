@@ -4,8 +4,6 @@ test.setTimeout(150000);
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));
@@ -32,7 +30,7 @@ test('fresh Space works after its release happened outside the game window', asy
   // Headless tabs retain OS focus. Model the lost event at the browser boundary,
   // while keeping trusted keyboard input and native button activation.
   await page.evaluate(() => {
-    window.dispatchEvent(new Event('blur'));
+    window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus'));
     window.addEventListener('keyup', event => { event.preventDefault(); event.stopImmediatePropagation(); }, { capture: true, once: true });
   });
   await page.keyboard.up('Space');
@@ -82,7 +80,7 @@ test('a fresh Space immediately after resume is not confused with the previous p
 test('holding Space across focus loss and resume does not release a charge', async ({ page }) => {
   await page.keyboard.press('p');
   await page.keyboard.down('Space');
-  await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+  await page.evaluate(() => { window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus')); });
   await page.getByRole('button', { name: '继续游戏', exact: true }).click();
   await page.keyboard.down('Space');
   await page.clock.runFor(100);

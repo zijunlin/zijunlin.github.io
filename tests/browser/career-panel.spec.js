@@ -65,18 +65,13 @@ test('direct career links reload and remain readable without WebGL', async ({ pa
   await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   await page.keyboard.press('Escape');
   await expect(career).toBeHidden();
-  await expect(page.locator('.celestial-stage').getByRole('link', { name: '职业历程', exact: true })).toBeFocused();
+  await expect(page.getByRole('navigation').getByRole('link', { name: '首页', exact: true })).toBeFocused();
+  await expect(page.locator('.world-fallback')).toBeVisible();
 });
 
 test('career preserves both celestial layouts while its panel scrolls', async ({ page }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-      return type === 'webgl' ? null : original.call(this, type, ...args);
-    };
-  });
   for (const seed of [0, 4]) {
     await page.goto(`/?seed=${seed}`);
     const world = page.getByRole('region', { name: /星辰圆点/ });

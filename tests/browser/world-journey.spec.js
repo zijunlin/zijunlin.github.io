@@ -1,8 +1,11 @@
 import { test, expect } from '@playwright/test';
 
-const combinations = [[0, '星辰圆点 · 环绕核心'], [4, '星辰圆点 · 成长路径']];
+const combinations = [
+  [0, '星辰圆点 · 环绕核心', '软件工程 · 持续探索'],
+  [4, '星辰圆点 · 成长路径', '软件工程 · 成长路径'],
+];
 
-for (const [seed, caption] of combinations) {
+for (const [seed, worldName, caption] of combinations) {
   test(`the complete visitor journey preserves every layer in layout seed ${seed}`, async ({ page }, testInfo) => {
     test.setTimeout(120000);
     const errors = [];
@@ -22,7 +25,7 @@ for (const [seed, caption] of combinations) {
     await page.goto(`/?seed=${seed}`);
     await page.clock.runFor(1000);
     const selection = page.getByLabel('世界形态与空间布局');
-    const world = page.getByRole('region', { name: caption, exact: true });
+    const world = page.getByRole('region', { name: worldName, exact: true });
     const image = world.locator('.celestial-stage');
     const background = page.locator('canvas[aria-hidden="true"]');
     const navigation = page.getByRole('navigation', { name: '主目录' });
@@ -36,12 +39,14 @@ for (const [seed, caption] of combinations) {
 
     await world.getByRole('link', { name: '作品集', exact: true }).click();
     await expect(page).toHaveURL(/#work$/);
-    await directory.locator('summary').click();
+    await directory.locator('summary').press('Enter');
+    await expect(directory.locator('details')).toHaveAttribute('open', '');
     for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720 }, { width: 1920, height: 1080 }]) {
       await page.setViewportSize(viewport);
       await page.clock.runFor(100);
       for (const target of [image]) {
-        await expect(target).toBeInViewport({ ratio: 1 });
+        // IntersectionObserver rounds the ratio below 1 for fractional bounds.
+        await expect(target).toBeInViewport({ ratio: .999999 });
         const box = await target.boundingBox();
         expect(box.x + box.width).toBeLessThanOrEqual(viewport.width);
       }

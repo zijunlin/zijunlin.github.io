@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test';
 
-// Isolate timing assertions from synchronous software-GPU startup.
+// These two loading-timing checks deliberately use the static fallback. Real
+// WebGL startup and moving graphics have their own rendering checks.
 async function useStaticBackground(page) {
-  await page.addInitScript(() => {
-    HTMLCanvasElement.prototype.getContext = () => null;
-  });
+  await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
 }
 
 // Hold the real production scene chunk at the network boundary, never a
@@ -56,7 +55,7 @@ async function observeLoading(page) {
   });
 }
 
-test('the outline stays hidden for about 400ms even while scripts download', async ({ page }) => {
+test('the fallback loading outline stays hidden for about 400ms while scripts download', async ({ page }) => {
   await useStaticBackground(page);
   await observeLoading(page);
   const release = await holdScene(page);
@@ -72,9 +71,9 @@ test('the outline stays hidden for about 400ms even while scripts download', asy
   await expect(page.getByRole('status')).toBeHidden();
 });
 
-test('fast initialization skips the loading message and plays a brief entrance once', async ({ page }) => {
-  // Dynamic rendering is covered separately.
+test('fast static homepage initialization skips the loading message and plays a brief entrance once', async ({ page }) => {
   await useStaticBackground(page);
+  // Dynamic rendering is covered separately.
   await observeLoading(page);
   await page.goto('/');
   const heading = page.getByRole('heading', { name: '在构建中，保持好奇。' });

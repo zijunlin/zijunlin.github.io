@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const gameRoot = new URL('../../src/features/work-games/', import.meta.url);
+const sceneRoot = new URL('../../src/features/scene/', import.meta.url);
 
 async function runtimeFiles(directory = gameRoot) {
   const files = [];
@@ -21,9 +22,23 @@ test('game runtime owns no homepage imports or homepage DOM vocabulary', async (
     const imports = /(?:from\s*|import\s*\(\s*|import\s*)['"]([^'"]+)['"]/g;
     for (const [, dependency] of source.matchAll(imports)) {
       if (!dependency.startsWith('.')) continue;
-      assert.ok(new URL(dependency, file).href.startsWith(gameRoot.href),
+      const resolved = new URL(dependency, file).href;
+      assert.ok(resolved.startsWith(gameRoot.href) || resolved.startsWith(sceneRoot.href),
         `${name} imports outside the game directory: ${dependency}`);
     }
-    assert.doesNotMatch(source, /scene-heading|orb-halo|orb-art|celestial-gate|header-height|location\.hash/, name);
+    assert.doesNotMatch(source, /scene-heading|orb-halo|\borb-art\b|celestial-gate|header-height|location\.hash/, name);
+  }
+});
+
+// Keep the shipped scene contract free of the retired DOM artwork renderer.
+test('shared scene ships no retired SVG animation stylesheet or clone adapter', async () => {
+  const files = [
+    '../../src/features/world/world.css',
+    '../../src/features/world/world-view.js',
+    '../../src/app/home-game-adapter.js',
+  ];
+  for (const path of files) {
+    const source = await readFile(new URL(path, import.meta.url), 'utf8');
+    assert.doesNotMatch(source, /\.orb-(?:art|halo|disc|pulse|particles|inflow|infall|circulating|satellite)\b|@keyframes orb-|cloneNode|createElementNS/, path);
   }
 });

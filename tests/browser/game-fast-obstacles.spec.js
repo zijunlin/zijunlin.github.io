@@ -11,8 +11,6 @@ for (const motion of ['reduce', 'no-preference']) {
       test.setTimeout(150000);
       await page.addInitScript(() => {
         Math.random = () => .1;
-        const getContext = HTMLCanvasElement.prototype.getContext;
-        HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : getContext.apply(this, args); };
       });
       await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
       await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));

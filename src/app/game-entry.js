@@ -2,14 +2,26 @@ import { prepareHomeGame } from './home-game-adapter.js';
 import gameUrl from 'virtual:space-game-url';
 
 // This module is the entire eager game boundary. The game owns no resources until eligible automatic entry.
-export function mountGameEntry(scene, getWorld) {
+export function mountGameEntry(scene, getWorld, graphics) {
   const pressed = new Set();
   window.addEventListener('pointerdown', event => pressed.add(event.pointerId), { capture: true });
   for (const type of ['pointerup', 'pointercancel']) window.addEventListener(type, event => pressed.delete(event.pointerId), { capture: true });
   window.addEventListener('blur', () => pressed.clear());
   let elapsed = 0, last = performance.now(), consumed = false, generation = 0;
   let dialog, session, returnFocus, loadingNotice, loadingTimer, loadingLanguage, loadingCancel;
-  let loading = false, readyToStart;
+  let loading = false, readyToStart, waitingForGraphics = false;
+  let modulePromise, importAttempt = 0;
+  function loadModule() {
+    // Session cancellation must not create a new module identity. A successful
+    // import is shared by later runs; only a failed import needs a fresh URL.
+    if (!modulePromise) {
+      modulePromise = import(/* @vite-ignore */ `${gameUrl}?attempt=${++importAttempt}`).catch(error => {
+        modulePromise = undefined;
+        throw error;
+      });
+    }
+    return modulePromise;
+  }
   const text = (zh, en) => document.documentElement.lang === 'en' ? en : zh;
   const eligible = () => !location.hash.replace('#', '') && !document.hidden && document.hasFocus()
     && innerWidth >= 280 && innerHeight >= 280 && !scene.hidden
@@ -24,6 +36,7 @@ export function mountGameEntry(scene, getWorld) {
     loadingCancel?.remove(); loadingCancel = null;
   }
   function leave(restoreFocus = true) {
+    waitingForGraphics = false;
     generation++;
     clearLoading();
     closeDialog();
@@ -74,17 +87,28 @@ export function mountGameEntry(scene, getWorld) {
       document.body.append(loadingNotice, loadingCancel);
     }, 300);
     try {
-      const { startGame } = await import(/* @vite-ignore */ `${gameUrl}?attempt=${token}`);
+      const { startGame } = await loadModule();
       if (token !== generation) return;
       readyToStart = () => {
         if (token !== generation || pressed.size) return;
         if (!eligible()) { leave(false); return; }
+        if (!graphics.available) { clearLoading(); showUnavailable(); return; }
         clearLoading();
-        const presentation = prepareHomeGame(scene, getWorld());
+        const presentation = prepareHomeGame(scene, getWorld(), graphics);
         try {
-          session = startGame({ presentation, leave, text });
+          const started = startGame({ presentation, leave, text });
+          // The first draw can fail while startGame still owns its resources.
+          if (token !== generation || !graphics.available) {
+            started.dispose();
+            if (!graphics.available) showUnavailable();
+            return;
+          }
+          session = started;
           consumed = true;
-        } catch { presentation.dispose(); showLoadFailure(); }
+        } catch {
+          presentation.dispose();
+          if (graphics.available) showLoadFailure(); else showUnavailable();
+        }
       };
       if (!pressed.size) readyToStart();
     } catch {
@@ -99,9 +123,35 @@ export function mountGameEntry(scene, getWorld) {
       [text('返回首页', 'Return home'), () => { consumed = true; leave(); }],
     ]);
   }
+  function showUnavailable() {
+    consumed = true;
+    waitingForGraphics = graphics.status === 'recovering';
+    show(waitingForGraphics ? text('正在恢复图形', 'Restoring graphics')
+      : text('当前图形功能不可用，暂时无法开始游戏', 'Graphics are unavailable. The game cannot start.'), [
+      [text('返回首页', 'Return home'), () => leave()],
+    ]);
+  }
+  graphics.subscribe(status => {
+    if (status === 'ready') {
+      if (waitingForGraphics) closeDialog();
+      waitingForGraphics = false;
+      return;
+    }
+    pressed.clear(); resetTaps(); consumed = true;
+    if (status === 'recovering') {
+      // Cancel stale imports without discarding an already published session.
+      generation++; clearLoading(); closeDialog();
+    } else {
+      const hadSession = Boolean(session) || waitingForGraphics;
+      waitingForGraphics = false;
+      leave(false);
+      if (hadSession) showUnavailable();
+    }
+  });
   function enter() {
     if (session || loading || dialog || !eligible() || document.querySelector('dialog[open]')) return;
     returnFocus = document.activeElement === document.body ? scene.querySelector('a') : document.activeElement;
+    if (!graphics.available) { showUnavailable(); return; }
     load();
   }
   // Touch-only shortcut: three short taps near one point on the empty home
@@ -137,14 +187,22 @@ export function mountGameEntry(scene, getWorld) {
     const now = performance.now();
     const delta = Math.min(now - last, 250); last = now;
     if (readyToStart && !pressed.size) { readyToStart(); return; }
-    if (consumed || !eligible() || document.querySelector('dialog[open]')) return;
+    if (!graphics.available || consumed || !eligible() || document.querySelector('dialog[open]')) return;
     elapsed += delta;
     if (elapsed < 10000 || pressed.size) return;
     enter();
   }, 100);
   // Capture navigation before site content handlers restore their own focus.
-  window.addEventListener('popstate', () => leave(false), { capture: true });
-  window.addEventListener('hashchange', () => leave(false), { capture: true });
+  let navigationUrl = location.href;
+  function navigate() {
+    // A fragment navigation emits popstate, then hashchange. Cached imports
+    // may finish between them; the second event must not cancel the new run.
+    if (navigationUrl === location.href) return;
+    navigationUrl = location.href;
+    leave(false);
+  }
+  window.addEventListener('popstate', navigate, { capture: true });
+  window.addEventListener('hashchange', navigate, { capture: true });
   window.addEventListener('pagehide', () => leave(false));
   window.addEventListener('keydown', event => {
     const target = event.target;

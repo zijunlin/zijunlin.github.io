@@ -1,5 +1,5 @@
 import { mountGameEntry } from './game-entry.js';
-import { mountBackground } from '../features/background/background.js';
+import { mountSharedRenderer } from '../features/scene/shared-renderer.js';
 import { worldState } from './world-state.js';
 import { mountReadingPanels } from '../features/reading-panels/reading-panels.js';
 import { mountWorkPreview } from '../features/work-preview/work-preview.js';
@@ -9,13 +9,16 @@ import { mountWorldFallback } from '../features/world/world-fallback.js';
 const content = document.getElementById('content');
 const loading = document.getElementById('world-loading');
 const scene = document.getElementById('world-entry');
-let world;
-mountGameEntry(scene, () => world);
+let world, generation = 0;
+const graphics = mountSharedRenderer(document.getElementById('shader-canvas'), worldState);
+mountGameEntry(scene, () => world, graphics);
 
 async function enterWorld() {
+  const token = ++generation;
   try {
     const { mountWorld } = await import('../features/world/world-scene.js');
-    world = await mountWorld(scene, worldState);
+    if (token !== generation) return;
+    world = await mountWorld(scene, worldState, graphics);
     scene.hidden = false;
     scene.classList.add('entering');
   } catch {
@@ -29,7 +32,12 @@ async function enterWorld() {
   }
 }
 
-mountBackground(document.getElementById('shader-canvas'), worldState);
+graphics.subscribe(status => {
+  scene.style.animationPlayState = status === 'recovering' ? 'paused' : '';
+  if (status !== 'unavailable') return;
+  if (!world) return; // An in-flight mount reads the current graphics status.
+  world.dispose(); world = undefined; void enterWorld();
+});
 mountReadingPanels(content);
 mountWorkPreview();
 void enterWorld();

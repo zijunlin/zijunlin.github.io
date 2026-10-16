@@ -2,6 +2,10 @@ import { localize } from '../../i18n/index.js';
 import { mountWorldParallax } from './world-parallax.js';
 import { readingRoute } from '../../navigation/content-route.js';
 import { createTrailMetric, trailSegments, TRAIL_FRACTIONS } from './orbital-trails.js';
+import { createOrbAppearance } from '../scene/orb-scene.js';
+import { createOrbMotion } from '../scene/orb-motion.js';
+import { createOrbLayer } from '../scene/orb-layer.js';
+import { createTrailLayer } from '../scene/trail-layer.js';
 
 const gates = [
   { id: 'about', name: '关于我', subtitle: 'IDENTITY' },
@@ -26,35 +30,8 @@ function position(index, layout, elapsed = 0) {
     218 + radius * Math.sqrt(1 - eccentricity ** 2) * Math.sin(eccentric) * .5];
 }
 
-function circleArt(index) {
-  // Eight brighter particles spiral inward; the other 28 orbit at fixed radii.
-  const dust = Array.from({ length: 36 }, (_, i) => {
-    // Sample uniformly by area around the disc, within the halo's smallest breath.
-    // Positions are chosen once at mount, so hovering does not reshuffle particles.
-    const angle = Math.random() * 360;
-    const radius = Math.sqrt(38 ** 2 + Math.random() * (100 ** 2 - 38 ** 2));
-    const siphons = i % 8 === 0 || i >= 32;
-    const duration = siphons ? 2.8 + (i % 9) * .3 : 10 + (i % 9) * .7;
-    return `<g class="orb-inflow${siphons ? '' : ' orb-circulating'}" style="--start-angle:${angle}deg;--inflow-radius:${radius}px;--inflow-duration:${duration}s;--inflow-delay:${-duration * ((i * .618034) % 1)}s">
-      <circle class="${siphons ? 'orb-infall' : 'orb-satellite'}" cx="${100 + radius}" cy="100" r="${1.8 + (i % 5) * .35}"/>
-    </g>`;
-  }).join('');
-  return `<svg viewBox="0 0 200 200" aria-hidden="true">
-    <defs><radialGradient id="circle-halo-${index}"><stop stop-color="currentColor" stop-opacity="1"/><stop offset=".45" stop-color="currentColor" stop-opacity=".55"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></radialGradient></defs>
-    <g class="orb-halo"><g class="orb-pulse" style="--pulse-delay:${-index * 1.7}s">
-      <circle cx="100" cy="100" r="125" fill="url(#circle-halo-${index})"/>
-    </g></g>
-    <circle class="orb-disc" cx="100" cy="100" r="35.7" fill="currentColor"/>
-    <g class="orb-particles">${dust}</g>
-  </svg>`;
-}
-
-// SVG IDs only need to distinguish mounted views in this document, including
-// local HTTP previews where crypto.randomUUID is unavailable.
-let nextTrailMaskId = 0;
-
-// Transparent vector constellations remain crisp and usable without a 3D GPU.
-export async function mountWorldView(container, state) {
+// Semantic links and native graphics consume the same orbital geometry.
+export async function mountWorldView(container, state, graphics) {
   const area = document.createElement('section');
   area.className = 'world-area celestial-area';
   area.setAttribute('aria-label', `星辰圆点 · ${state.layout === 'A' ? '环绕核心' : '成长路径'}`);
@@ -62,36 +39,9 @@ export async function mountWorldView(container, state) {
   stage.className = 'world-stage celestial-stage';
   area.append(stage);
   container.append(area);
-  const trails = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  trails.setAttribute('viewBox', '0 0 640 440');
-  trails.setAttribute('preserveAspectRatio', 'none');
-  trails.setAttribute('aria-hidden', 'true');
-  trails.classList.add('celestial-trails');
-  const maskId = `trail-disc-mask-${++nextTrailMaskId}`;
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  defs.innerHTML = `<mask id="${maskId}" maskUnits="userSpaceOnUse" x="0" y="0" width="640" height="440" style="mask-type:luminance"><rect width="640" height="440" fill="white" stroke="none"/></mask>`;
-  trails.append(defs);
-  const mask = defs.firstElementChild;
-  const cutouts = orbits.map(() => {
-    const cutout = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
-    cutout.classList.add('trail-disc-cutout');
-    cutout.setAttribute('fill', 'black');
-    cutout.setAttribute('stroke', 'none');
-    mask.append(cutout);
-    return cutout;
-  });
-  const trailPaths = orbits.map(() => {
-    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    group.setAttribute('mask', `url(#${maskId})`);
-    trails.append(group);
-    return Array.from({ length: 128 }, (_, segment) => {
-      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('stroke-opacity', .15 * (1 - segment / 127));
-      group.append(path);
-      return path;
-    });
-  });
-  stage.append(trails);
+  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const appearances = gates.map((_, i) => createOrbAppearance(i));
+  const artwork = appearances.map(appearance => createOrbMotion(appearance, { reduced: reducedMotion.matches }));
   const links = gates.map((gate, i) => {
     const link = document.createElement('a');
     link.className = `celestial-gate${gate.id === 'work' ? ' celestial-featured' : ''}`;
@@ -99,90 +49,100 @@ export async function mountWorldView(container, state) {
     link.setAttribute('aria-label', gate.name);
     const point = position(i, state.layout);
     link.style.cssText = `left:${point[0] / 640 * 100}%;top:${point[1] / 440 * 100}%;--orb-color:#a2d9df`;
-    link.innerHTML = `<span class="orb-art">${circleArt(i)}</span><span class="orb-caption"><small>${gate.subtitle}</small><span>${gate.name}</span></span>`;
+    link.innerHTML = `<span class="orb-caption"><small>${gate.subtitle}</small><span>${gate.name}</span></span>`;
     stage.append(link);
     return link;
   });
   localize(area);
-  const parallax = mountWorldParallax(stage, document.getElementById('shader-canvas'));
+  const parallax = mountWorldParallax(stage, graphics);
   const controller = new AbortController();
   const { signal } = controller;
-  let present = true, hovered = false, focused = false;
-  let frame = 0, elapsed = 0, trailElapsed = 0, previous = 0, taken = false, savedElapsed = 0;
-  const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  let trailMetrics = [];
-  function drawTrails() {
-    cutouts.forEach((cutout, i) => {
-      const [x, y] = position(i, state.layout, elapsed);
-      cutout.setAttribute('cx', x);
-      cutout.setAttribute('cy', y);
-    });
-    trailMetrics.forEach((metric, i) => {
-      trailSegments(metric, trailElapsed, TRAIL_FRACTIONS[i]).forEach(({ start, end }, segment) => {
-        trailPaths[i][segment].setAttribute('d', trailElapsed > 0
-          ? `M ${start[0]} ${start[1]} L ${end[0]} ${end[1]}` : '');
-      });
-    });
-  }
+  let present = true, hovered = false, focused = false, active = document.hasFocus();
+  let paused = true;
+  let elapsed = 0, previous, taken = false, savedElapsed = 0;
+  let trailMetrics = [], lastTrailElapsed;
   function measureTrails() {
-    cutouts.forEach((cutout, i) => {
-      const radius = Number(links[i].querySelector('.orb-disc').getAttribute('r')) * links[i].clientWidth / 200;
-      cutout.setAttribute('rx', radius * 640 / stage.clientWidth);
-      cutout.setAttribute('ry', radius * 440 / stage.clientHeight);
-    });
+    lastTrailElapsed = undefined;
     trailMetrics = orbits.map(({ period }, i) => createTrailMetric(
       time => position(i, state.layout, time), period, stage.clientWidth / 640, stage.clientHeight / 440,
     ));
-    drawTrails();
   }
-  const resizeObserver = new ResizeObserver(measureTrails);
+  const resizeObserver = new ResizeObserver(() => { measureTrails(); graphics.redraw(); });
   resizeObserver.observe(stage);
   measureTrails();
-  function animate(now) {
-    frame = 0;
-    if (previous) {
-      const dt = Math.min((now - previous) / 1000, .1);
-      if (!taken) { elapsed += dt; trailElapsed = elapsed; }
-    }
-    previous = now;
-    if (!taken) links.forEach((link, i) => {
-      const [x, y] = position(i, state.layout, elapsed);
-      link.style.left = `${x / 640 * 100}%`;
-      link.style.top = `${y / 440 * 100}%`;
-    });
-    // Hidden homepage trails share the frozen orb phase until the game returns.
-    if (!taken) drawTrails();
-    frame = requestAnimationFrame(animate);
+  function geometry(i) {
+    // The link owns the responsive hit area. Its viewport box includes the same
+    // stage parallax and entrance translation as its label and the native trail.
+    const box = links[i].getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2, size: box.width };
   }
+  let layer;
+  try {
+    layer = graphics.addLayer((gl, resources) => {
+      let orbs = [], bounds, opacity = 0;
+      const tracks = orbits.map(() => []);
+      lastTrailElapsed = undefined;
+      const trails = createTrailLayer(gl, resources, () => ({ tracks, orbs, bounds, opacity, elapsed }));
+      const circles = createOrbLayer(gl, resources, () => orbs);
+      return { draw(info) {
+        const dt = previous === undefined ? 0 : Math.min(Math.max(0, info.elapsed - previous), .1);
+        previous = info.elapsed;
+        if (!taken) artwork.forEach(art => art.advance(dt * 1000));
+        if (!paused) {
+          elapsed += dt;
+          links.forEach((link, i) => {
+            const [x, y] = position(i, state.layout, elapsed);
+            link.style.left = `${x / 640 * 100}%`;
+            link.style.top = `${y / 440 * 100}%`;
+          });
+        }
+        if (taken || container.hidden) return;
+        opacity = Number(getComputedStyle(container).opacity);
+        bounds = stage.getBoundingClientRect();
+        orbs = links.map((link, i) => ({ ...geometry(i), opacity, appearance: artwork[i].snapshot(),
+          priority: link.matches(':hover, :focus-visible') ? 1 : 0 })).sort((a, b) => a.priority - b.priority);
+        if (elapsed !== lastTrailElapsed) {
+          trailMetrics.forEach((metric, i) => trailSegments(metric, elapsed, TRAIL_FRACTIONS[i], 128, tracks[i]));
+          lastTrailElapsed = elapsed;
+        }
+        // Geometry, numerical cutouts and artwork all describe this same frame.
+        trails.draw(info);
+        circles.draw(info);
+      } };
+    });
+  } catch (error) {
+    controller.abort(); resizeObserver.disconnect(); parallax.dispose(); area.remove();
+    throw error;
+  }
+
   function sync() {
-    cutouts.forEach((cutout, i) => cutout.classList.toggle('is-expanded', links[i].matches(':hover, :focus-visible')));
     const selected = readingRoute().slice(1);
     const preview = Boolean(selected);
-    stage.classList.toggle('celestial-paused', document.hidden || !present || preview || taken);
+    stage.classList.toggle('celestial-paused', document.hidden || !present || !active || preview || taken);
+    artwork.forEach((art, i) => {
+      if (!taken) art.setExpanded(links[i].matches(':hover, :focus-visible'));
+      art.setPaused(document.hidden || !present || !active || preview || taken);
+    });
     links.forEach((link, i) => link.classList.toggle('is-active', gates[i].id === selected));
-    const paused = document.hidden || !present || preview || (!taken && (hovered || focused)) || reducedMotion.matches;
-    if (paused) {
-      cancelAnimationFrame(frame);
-      frame = 0;
-      previous = 0;
-    } else if (!frame) frame = requestAnimationFrame(animate);
+    paused = document.hidden || !present || !active || preview || taken || hovered || focused || reducedMotion.matches;
   }
-  links.forEach(link => {
-    let gesture, suppressClick = false, feedback;
+  const cancelGestures = [];
+  links.forEach((link, i) => {
+    let gesture, suppressClick = false;
+    cancelGestures.push(() => {
+      const id = gesture?.id;
+      if (gesture) suppressClick = true;
+      gesture = null;
+      if (id !== undefined && link.hasPointerCapture(id)) link.releasePointerCapture(id);
+    });
     // Native link dragging cancels pointer capture before the visitor releases.
     link.addEventListener('dragstart', event => event.preventDefault(), { signal });
     link.addEventListener('pointerdown', event => {
-      if (!event.isPrimary || event.button !== 0) return;
+      if (!graphics.available || !event.isPrimary || event.button !== 0) return;
       suppressClick = false;
       gesture = { id: event.pointerId, x: event.clientX, y: event.clientY };
       link.setPointerCapture(event.pointerId);
-      if (!reducedMotion.matches) {
-        feedback?.cancel();
-        feedback = link.querySelector('.orb-art').animate([
-          { translate: '0 0' }, { translate: '-2px 0' },
-          { translate: '2px 0' }, { translate: '0 0' },
-        ], { duration: 220, easing: 'ease-out' });
-      }
+      artwork[i].press();
     }, { signal });
     link.addEventListener('pointermove', event => {
       if (gesture?.id === event.pointerId && Math.hypot(event.clientX - gesture.x, event.clientY - gesture.y) > 8) suppressClick = true;
@@ -197,75 +157,66 @@ export async function mountWorldView(container, state) {
       if (suppressClick && event.detail !== 0) { event.preventDefault(); event.stopImmediatePropagation(); }
       suppressClick = false;
     }, { signal, capture: true });
-    link.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') { hovered = true; sync(); } }, { signal });
+    link.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') hovered = true; sync(); }, { signal });
     link.addEventListener('pointerleave', () => { hovered = false; sync(); }, { signal });
+  });
+  const unsubscribeGraphics = graphics.subscribe(status => {
+    if (status === 'recovering') cancelGestures.forEach(cancel => cancel());
   });
   stage.addEventListener('focusin', () => { focused = links.some(link => link.matches(':focus-visible')); sync(); }, { signal });
   stage.addEventListener('focusout', event => { focused = Boolean(event.relatedTarget?.matches(':focus-visible') && stage.contains(event.relatedTarget)); sync(); }, { signal });
-  reducedMotion.addEventListener('change', sync, { signal });
+  reducedMotion.addEventListener('change', () => { artwork.forEach(art => art.setReducedMotion(reducedMotion.matches)); sync(); graphics.redraw(); }, { signal });
+  window.addEventListener('blur', () => { active = false; sync(); }, { signal });
+  window.addEventListener('focus', () => { active = true; previous = undefined; sync(); }, { signal });
+  container.addEventListener('animationend', event => { if (event.animationName === 'world-arrive') graphics.redraw(); }, { signal });
   window.addEventListener('hashchange', sync, { signal });
   document.addEventListener('visibilitychange', sync, { signal });
   window.addEventListener('pagehide', () => { present = false; sync(); }, { signal });
   window.addEventListener('pageshow', () => { present = true; sync(); }, { signal });
   sync();
-  const pausedAnimations = [];
   return {
     takeOver() {
       savedElapsed = elapsed;
       taken = true;
-      trails.style.visibility = 'hidden';
-      parallax.suspend(true);
-      const captures = links.map(link => {
+      // Capture interaction geometry and numerical appearance before focus or
+      // visibility changes. The game renders these values in the shared context.
+      const captures = links.map((link, i) => {
         const bounds = link.getBoundingClientRect();
-        const source = link.querySelector('.orb-art');
-        const art = source.cloneNode(true);
-        const originals = [source, ...source.querySelectorAll('*')];
-        const copies = [art, ...art.querySelectorAll('*')];
-        originals.forEach((node, i) => {
-          const computed = getComputedStyle(node);
-          for (const property of computed) copies[i].style.setProperty(property, computed.getPropertyValue(property));
-          copies[i].style.animation = 'none';
-          copies[i].style.transition = 'none';
-        });
-        for (const animation of link.getAnimations({ subtree: true })) {
-          if (animation.playState === 'running') { pausedAnimations.push(animation); animation.pause(); }
-        }
+        return { id: gates[i].id, x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2,
+          size: bounds.width, appearance: artwork[i].snapshot() };
+      });
+      parallax.suspend(true);
+      links.forEach(link => {
         link.style.visibility = 'hidden';
         link.inert = true;
-        return { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height / 2, size: bounds.width, art };
       });
-      cutouts.forEach(node => { node.style.visibility = 'hidden'; });
-      sync();
+      sync(); graphics.redraw();
       return captures;
     },
     returnTargets() {
-      return links.map(link => {
+      return links.map((link, i) => {
         const box = link.getBoundingClientRect();
-        return { x: box.x + box.width / 2, y: box.y + box.height / 2, size: box.width };
+        return { x: box.x + box.width / 2, y: box.y + box.height / 2, size: box.width, appearance: artwork[i].returnAppearance() };
       });
     },
     restore() {
       if (!taken) return;
       taken = false;
-      trails.style.visibility = '';
       elapsed = savedElapsed;
-      trailElapsed = elapsed;
-      drawTrails();
-      previous = 0;
+      previous = undefined;
       links.forEach((link, i) => {
         const [x, y] = position(i, state.layout, elapsed);
         link.style.left = `${x / 640 * 100}%`;
         link.style.top = `${y / 440 * 100}%`;
         link.style.visibility = '';
         link.inert = false;
+        artwork[i].setExpanded(false, true);
       });
-      cutouts.forEach(node => { node.style.visibility = ''; });
-      pausedAnimations.splice(0).forEach(animation => animation.play());
       parallax.suspend(false);
-      sync();
+      sync(); graphics.redraw();
     },
     dispose() {
-      controller.abort(); cancelAnimationFrame(frame); resizeObserver.disconnect(); parallax.dispose(); area.remove();
+      unsubscribeGraphics(); controller.abort(); layer.dispose(); resizeObserver.disconnect(); parallax.dispose(); area.remove();
     },
   };
 }

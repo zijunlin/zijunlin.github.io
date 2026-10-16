@@ -42,13 +42,7 @@ test('a shared preview closes inside the site without adding another preview to 
 for (const seed of [0, 4]) {
   test(`preview preserves the world and selected directory in layout seed ${seed}`, async ({ page }) => {
     test.setTimeout(60000);
-    // Keep the world renderer; the background's motion is verified separately.
-    await page.addInitScript(() => {
-      const getContext = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-        return type === 'webgl' ? null : getContext.call(this, type, ...args);
-      };
-    });
+    // Preserve real shared graphics; no-WebGL is a separate static-home case.
     await page.goto(`/?seed=${seed}`);
     const world = page.getByRole('region', { name: /星辰圆点/ });
     const scene = world.locator('.celestial-stage');
@@ -59,7 +53,10 @@ for (const seed of [0, 4]) {
     await entrance.focus();
     await page.keyboard.press('Enter');
     const directory = page.getByRole('region', { name: '作品', exact: true });
-    await directory.locator('summary').click();
+    // The summary contains an outbound link near its center. Activate the
+    // summary itself so this history test reliably expands the directory.
+    await directory.locator('summary').press('Enter');
+    await expect(directory.locator('details')).toHaveAttribute('open', '');
     const before = await scene.boundingBox();
     const label = await page.getByLabel('世界形态与空间布局').textContent();
     await directory.getByRole('link', { name: '查看作品预览' }).click();

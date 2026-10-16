@@ -64,7 +64,7 @@ test('preflight rejects the clock and random-phase failures before a full measur
 
 test('measurement starts a fresh clock and retains a transient complete volley', () => {
   const callbacks = [];
-  const state = { ship: { x: 0, y: 0, movementSpeed: 690 }, trajectoryCount: 24, fireInterval: .11, piercing: true,
+  const state = { ship: { x: 0, y: 0, movementSpeed: 570 }, trajectoryCount: 24, fireInterval: .11, piercing: true,
     obstacles: [{ fast: true }, { fast: false }], bullets: Array.from({ length: 24 }, () => ({ piercing: true, life: 1.9 })) };
   const context = { window: { battleSnapshot: state, backgroundDraws: 3 }, performance: { now: () => 100 },
     document: { hidden: false, hasFocus: () => true, querySelector: () => null }, requestAnimationFrame: callback => callbacks.push(callback) };
@@ -73,6 +73,7 @@ test('measurement starts a fresh clock and retains a transient complete volley',
   state.bullets = []; state.ship = { ...state.ship, x: 120 };
   callbacks.shift()(140);
   assert.equal(context.window.measurement.fullForwardCohort, true);
+  assert.equal(context.window.measurement.attributesValid, true, 'maximum growth uses the approved 570 movement speed');
   assert.equal(context.window.measurement.shipDistance, 120);
   assert.equal(context.window.measurement.intervals[0], 30);
   assert.equal(context.window.measurement.done, true);

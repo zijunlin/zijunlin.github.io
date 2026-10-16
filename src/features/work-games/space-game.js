@@ -24,11 +24,11 @@ export function startGame({ presentation, leave, text }) {
   const visuals = document.createElement('div'); visuals.className = 'game-visuals';
   visuals.style.transform = `scale(${scale})`; panel.append(visuals);
   const point = value => ({ ...value, x: value.x / scale, y: value.y / scale, size: value.size / scale });
-  const gamePerformance = mountGamePerformance({ layer: visuals, presentation: {
+  const gamePerformance = mountGamePerformance({ onFrame: draw, effects: () => view.frame, presentation: {
     ...presentation, satellites: presentation.satellites.map(point),
     returnTargets: () => presentation.returnTargets().map(point),
-  }, reduced });
-  const view = mountBattleView(visuals, scale);
+  }, reduced, scale });
+  const view = mountBattleView(visuals, scale, () => presentation.graphics.pixelRatio);
   const controls = document.createElement('div'); controls.className = 'game-controls';
   const waveButton = document.createElement('button');
   waveButton.className = 'game-wave';
@@ -46,7 +46,7 @@ export function startGame({ presentation, leave, text }) {
   const controller = new AbortController(), { signal } = controller;
   const keys = new Set();
   let shockwavePending = false;
-  let phase = 'opening', previous = 0, frame = 0, paused = false, disposed = false, dialog, battle, arena;
+  let phase = 'opening', previous = 0, paused = false, disposed = false, dialog, battle, arena;
   function bounds() {
     if (!arena) {
       const box = presentation.getBounds();
@@ -64,17 +64,19 @@ export function startGame({ presentation, leave, text }) {
     battle?.resize(bounds());
   }
   function updateScore() {
-    shockwave.textContent = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${touch ? text('橙色圆环补充', 'Orange rings refill') : text('空格释放 · 橙色圆环补充', 'Space to release · Orange rings refill')}`;
-    waveButton.disabled = phase !== 'battle' || paused || !battle?.state.shockwaveCharges;
+    const waveText = `${text('冲击波', 'Shockwave')}: ${battle?.state.shockwaveCharges ?? 1} / 3 · ${touch ? text('橙色圆环补充', 'Orange rings refill') : text('空格释放 · 橙色圆环补充', 'Space to release · Orange rings refill')}`;
+    if (shockwave.textContent !== waveText) shockwave.textContent = waveText;
+    const disabled = phase !== 'battle' || paused || !battle?.state.shockwaveCharges;
+    if (waveButton.disabled !== disabled) waveButton.disabled = disabled;
     const value = `${text('分数', 'Score')}: ${battle?.state.score ?? 0} · ${text('存活', 'Survived')}: ${(battle?.state.seconds ?? 0).toFixed(1)}s`;
     if (score.textContent !== value) score.textContent = value;
     const valueFeedback = battle?.state.pickupFeedback > 0 ? battle.state.pickupResults.map(result => describePickup(result, text)).join(' · ') : '';
     if (feedback.textContent !== valueFeedback) feedback.textContent = valueFeedback;
-    feedback.hidden = !valueFeedback;
+    if (feedback.hidden !== !valueFeedback) feedback.hidden = !valueFeedback;
   }
   const language = new MutationObserver(labels);
   language.observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
-  function canResume() { return !document.hidden && document.hasFocus() && innerWidth >= 280 && innerHeight >= 280; }
+  function canResume() { return presentation.graphics.available && !document.hidden && document.hasFocus() && innerWidth >= 280 && innerHeight >= 280; }
   function closeDialog() { dialog?.close(); dialog?.remove(); dialog = null; }
   function modal(title, detail, actions) {
     closeDialog();
@@ -91,7 +93,7 @@ export function startGame({ presentation, leave, text }) {
   // Every lifecycle transition discards the old frame and input together. Keep the
   // battle paused while releasing its last pulse, before any resumed frame runs.
   function resetPlayback(suspended) {
-    cancelAnimationFrame(frame); frame = 0; previous = 0;
+    previous = 0;
     keys.clear(); shockwavePending = false; clearDrag(); activeTouches.clear();
     battle?.setPaused(true);
     battle?.advance(0);
@@ -107,35 +109,39 @@ export function startGame({ presentation, leave, text }) {
     view.draw(battle.state, bounds());
   }
   function returnHome() {
+    if (!presentation.graphics.available) { leave(); return; }
     if (phase === 'returning' || disposed) return;
     gamePerformance.returnHome();
     phase = 'returning'; resetPlayback(false); closeDialog();
     controls.hidden = true; surface.hidden = true; hud.hidden = true; panel.querySelector('.game-effects').hidden = true;
     panel.focus({ preventScroll: true });
-    frame = requestAnimationFrame(draw);
+    presentation.graphics.redraw();
   }
   function finish() {
+    if (!presentation.graphics.available) { leave(); return; }
     if (phase === 'returning') return;
     if (phase === 'opening') { returnHome(); return; }
     if (phase === 'results') return;
     phase = 'results'; resetPlayback(true);
     labels();
+    showResults();
+  }
+  function showResults() {
     modal(text('本局结束', 'Run complete'), score.textContent, [
       [text('再来一局', 'Play again'), () => {
         if (!canResume()) return;
         closeDialog(); beginBattle(); panel.focus({ preventScroll: true });
-        view.resize(); frame = requestAnimationFrame(draw);
+        view.resize(); presentation.graphics.redraw();
       }],
       [text('返回首页', 'Return home'), returnHome],
     ]);
   }
   function draw(now) {
-    frame = 0;
     if (paused || disposed) return;
     const dt = previous ? Math.min((now - previous) / 1000, .1) : 0; previous = now;
     if (phase === 'returning') {
       if (gamePerformance.advance(dt, bounds()) === 'returned') { leave(); return; }
-      frame = requestAnimationFrame(draw); return;
+      return;
     }
     if (phase === 'opening') {
       if (gamePerformance.advance(dt, bounds()) === 'ready') beginBattle();
@@ -148,16 +154,15 @@ export function startGame({ presentation, leave, text }) {
       });
       if (dt > 0) shockwavePending = false;
       updateScore(); view.draw(battle.state, bounds());
-      if (battle.state.ended) { finish(); return; }
+      if (battle.state.ended) { gamePerformance.advance(dt, bounds(), battle.state); finish(); return; }
     }
     if (phase === 'battle') gamePerformance.advance(dt, bounds(), battle.state);
-    frame = requestAnimationFrame(draw);
   }
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
     closeDialog(); resetPlayback(false);
     battle?.resize(bounds()); view.resize();
-    panel.focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
+    panel.focus({ preventScroll: true }); presentation.graphics.redraw();
   }
   function pause() {
     if (paused || disposed || phase === 'results' || phase === 'returning') return;
@@ -167,6 +172,21 @@ export function startGame({ presentation, leave, text }) {
       [phase === 'opening' ? text('返回首页', 'Return home') : text('结束本局', 'End run'), finish],
     ]);
   }
+  const unsubscribeGraphics = presentation.graphics.subscribe(status => {
+    if (disposed) return;
+    if (status === 'recovering') {
+      resetPlayback(true); updateScore();
+      modal(text('正在恢复图形', 'Restoring graphics'), text('游戏已暂停，请稍候。', 'The game is paused. Please wait.'), [
+        [text('返回首页', 'Return home'), leave],
+      ]);
+    } else if (status === 'ready') {
+      if (phase === 'results') { showResults(); return; }
+      modal(text('游戏已暂停', 'Game paused'), text('图形已恢复，准备好后继续。', 'Graphics restored. Resume when you are ready.'), [
+        [text('继续游戏', 'Resume game'), resume],
+        [text('返回首页', 'Return home'), leave],
+      ]);
+    }
+  });
   window.addEventListener('blur', pause, { signal });
   let viewportWidth = innerWidth;
   window.addEventListener('resize', () => {
@@ -218,11 +238,11 @@ export function startGame({ presentation, leave, text }) {
     if (movement.has(key) && phase === 'battle' && !paused) { event.preventDefault(); keys.add(key); }
   }, { signal });
   window.addEventListener('keyup', event => { keys.delete(event.key.toLowerCase()); }, { signal });
-  labels(); gamePerformance.advance(0, bounds()); panel.focus({ preventScroll: true }); frame = requestAnimationFrame(draw);
+  labels(); gamePerformance.advance(0, bounds()); panel.focus({ preventScroll: true }); presentation.graphics.redraw();
   return {
     escape() { if (phase === 'results') returnHome(); else finish(); },
     dispose() {
-      disposed = true; resetPlayback(true); controller.abort(); language.disconnect();
+      disposed = true; unsubscribeGraphics(); resetPlayback(true); controller.abort(); language.disconnect();
       closeDialog(); gamePerformance.dispose(); panel.remove();
     },
   };

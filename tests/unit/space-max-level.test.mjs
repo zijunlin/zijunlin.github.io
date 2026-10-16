@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { createBattle } from '../../src/features/work-games/battle.js';
 import { growthRun, harvest, collectDrop, growthBounds, step } from '../helpers/battle-growth.mjs';
 
-test('real drops independently grow every trajectory count through 24, movement through 690 and each capped attribute awards only 50 points', () => {
+test('real drops independently grow every trajectory count through 24, movement through 570 and each capped attribute awards only 50 points', () => {
   const { battle } = growthRun();
-  const counts = [2], speeds = [510], rates = [.16], bonuses = new Set();
+  const counts = [2], speeds = [390], rates = [.16], bonuses = new Set();
   harvest(battle, s => s.trajectoryCount === 24, (drop, before, state) => {
     if (state.trajectoryCount !== before.trajectoryCount) counts.push(state.trajectoryCount);
     if (state.ship.movementSpeed !== before.movementSpeed) speeds.push(state.ship.movementSpeed);
@@ -19,7 +19,7 @@ test('real drops independently grow every trajectory count through 24, movement 
     before.bullets.forEach(([bullet, piercing]) => assert.equal(bullet.piercing, piercing, 'already emitted shots retain their launch attributes'));
   });
   assert.deepEqual(counts, [2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24]);
-  assert.deepEqual(speeds, [510,570,630,690]);
+  assert.deepEqual(speeds, [390,450,510,570]);
   assert.deepEqual(rates, [.16,.13,.11]);
   assert.equal(battle.state.piercing, true);
   assert.deepEqual([...bonuses].sort(), ['fireRate','movement','piercing']);
@@ -32,7 +32,7 @@ test('real drops independently grow every trajectory count through 24, movement 
   battle.advance(20); assert.equal(JSON.stringify(battle.state), frozen);
   const fresh = createBattle({ bounds: growthBounds });
   assert.equal(fresh.state.trajectoryCount, 2); assert.equal(fresh.state.fireInterval, .16);
-  assert.equal(fresh.state.piercing, false); assert.equal(fresh.state.ship.movementSpeed, 510);
+  assert.equal(fresh.state.piercing, false); assert.equal(fresh.state.ship.movementSpeed, 390);
   assert.equal(fresh.state.shockwaveCharges, 1); assert.deepEqual(fresh.state.pickupResults, []);
 });
 
@@ -81,7 +81,7 @@ test('every unlocked trajectory emits one evenly spaced ray, with 12 and 120 deg
   for(let i=1;i<satelliteTimes.length;i++) assert.ok(Math.abs(satelliteTimes[i]-satelliteTimes[i-1]-.16)<step+1e-10);
 });
 
-for (const speed of [570, 630, 690]) test(`real movement pickups move diagonally at ${speed} CSS px/s and still constrain the ship`, () => {
+for (const speed of [450, 510, 570]) test(`real movement pickups move diagonally at ${speed} CSS px/s and still constrain the ship`, () => {
   const { battle } = growthRun();
   harvest(battle, s => s.ship.movementSpeed === speed);
   battle.resize({ left: -2000, right: 2000, top: -2000, bottom: 2000 });

@@ -58,7 +58,7 @@ test('the preview remains readable when world rendering is unavailable', async (
   await expect(page.getByRole('navigation')).toBeVisible();
 });
 
-test('preview dims the visible background and reduces its motion', async ({ browser }) => {
+test('preview dims the visible background and reduces its motion', async ({ browser, baseURL }) => {
   test.setTimeout(60000);
   const samples = [];
   for (const hash of ['', '#work/platform']) {
@@ -66,7 +66,7 @@ test('preview dims the visible background and reduces its motion', async ({ brow
     try {
       await page.clock.install({ time: new Date('2026-10-04T10:00:00Z') });
       await page.clock.pauseAt(new Date('2026-10-04T10:00:01Z'));
-      await page.goto(`http://127.0.0.1:4173/?seed=514018${hash}`);
+      await page.goto(`${baseURL}/?seed=514018${hash}`);
       await page.clock.runFor(100);
       await expect(page.locator('#shader-canvas')).toBeVisible();
       // The empty right band stays outside both the world and central dialog.

@@ -29,13 +29,25 @@ for (const resource of ['world-scene', 'world-view']) {
   });
 }
 
-test('celestial entrances and content remain usable without any WebGL context', async ({ page }) => {
+test('graphics failure keeps a static keyboard-accessible home and explains unavailable games', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
+  const gameRequests = [];
+  page.on('request', request => { if (/space-game.*\.(js|css)/.test(request.url())) gameRequests.push(request.url()); });
   await page.goto('/?seed=0');
   await expect(page.locator('#shader-canvas')).toBeHidden();
-  await expect(page.getByRole('alert')).toBeHidden();
-  const world = page.getByRole('region', { name: '星辰圆点 · 环绕核心' });
-  await expect(world.getByRole('link')).toHaveCount(4);
-  await world.getByRole('link', { name: '随笔', exact: true }).click();
+  const home = page.getByRole('region', { name: '继续浏览内容' });
+  await expect(home.getByRole('link')).toHaveCount(4);
+  await page.screenshot({ path: test.info().outputPath('static-home.png'), animations: 'disabled' });
+  await expect(page.locator('#world-entry svg')).toHaveCount(0);
+  const notes = home.getByRole('link', { name: '心得', exact: true });
+  await notes.focus();
+  await page.keyboard.press('Enter');
   await expect(page.getByRole('region', { name: '随笔', exact: true })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Shift+G');
+  await expect(page.getByRole('dialog')).toContainText('当前图形功能不可用，暂时无法开始游戏');
+  await page.getByRole('button', { name: '返回首页', exact: true }).click();
+  await expect(home).toBeVisible();
+  await expect(page.locator('.space-game')).toHaveCount(0);
+  expect(gameRequests).toEqual([]);
 });

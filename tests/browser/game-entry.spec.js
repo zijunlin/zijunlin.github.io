@@ -2,8 +2,9 @@ import { test, expect } from '@playwright/test';
 test.use({ reducedMotion: 'reduce' });
 test.setTimeout(60000);
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-  await page.clock.install();
+  const start = new Date('2026-10-14T00:00:00Z');
+  await page.clock.install({ time: start });
+  await page.clock.pauseAt(start);
 });
 
 test('automatically opens once after eligible dwell and loads lazily', async ({ page }) => {
@@ -81,6 +82,47 @@ test('a failed load can be retried or dismissed without losing the site', async 
   await page.getByRole('button', { name: '重试', exact: true }).click();
   await expect(page.getByText('正在集结')).toBeVisible();
   await expect(page.locator('.space-game')).toHaveCSS('position', 'fixed');
+});
+
+test('returning and entering again reuses the loaded module with a fresh game', async ({ page }) => {
+  const requests = [];
+  page.on('request', request => { if (/space-game-.*\.js/.test(request.url())) requests.push(request.url()); });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  for (let run = 0; run < 3; run++) {
+    await page.keyboard.press('Shift+G');
+    await expect(page.locator('.space-game')).toBeVisible();
+    await page.clock.runFor(3300);
+    await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+    await page.keyboard.press('Space');
+    await page.clock.runFor(32);
+    await expect(page.locator('.game-shockwave')).toContainText('0 / 3');
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: '返回首页', exact: true }).click();
+    await page.clock.runFor(1800);
+    await expect(page.locator('.space-game')).toHaveCount(0);
+  }
+  expect(requests).toHaveLength(1);
+});
+
+test('a new entry can reuse a pending import after the previous entry was cancelled', async ({ page }) => {
+  let release, requests = 0;
+  const pending = new Promise(resolve => { release = resolve; });
+  await page.route('**/assets/space-game-*.js*', async route => {
+    requests++; await pending; await route.continue();
+  });
+  await page.goto('/');
+  await expect(page.locator('#world-entry')).toBeVisible();
+  await page.keyboard.press('Shift+G');
+  await expect.poll(() => requests).toBe(1);
+  await page.keyboard.press('Escape');
+  await page.keyboard.press('Shift+G');
+  release();
+  await expect(page.locator('.space-game')).toHaveCount(1);
+  await page.clock.runFor(3300);
+  await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
+  expect(requests).toBe(1);
 });
 
 test('English automatic entry restores focus and hidden time does not count', async ({ page }) => {

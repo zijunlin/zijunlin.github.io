@@ -27,7 +27,7 @@ test('two collected drops accelerate the three-shot fan while satellites keep .1
   const battle = collectTwo();
   assert.equal(battle.state.trajectoryCount, 3);
   assert.equal(battle.state.fireInterval, .13);
-  assert.equal(battle.state.ship.movementSpeed, 510);
+  assert.equal(battle.state.ship.movementSpeed, 390);
   assert.equal(battle.state.piercing, false);
   assert.equal(battle.state.ended, false);
   assert.equal(battle.state.resources.length, 0);

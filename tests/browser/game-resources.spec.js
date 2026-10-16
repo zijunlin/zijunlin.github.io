@@ -1,3 +1,5 @@
+import { observeGameDrawing } from '../helpers/game-drawing.js';
+test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
 import { greenResourcePixels, forwardFanLanes } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
@@ -9,8 +11,6 @@ test('resource diamonds become a visible triple-shot upgrade and replay resets i
   page.setDefaultTimeout(15000);
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));
@@ -46,8 +46,6 @@ test('orange ring drops refill the visible shockwave reserve', async ({ page }) 
   page.setDefaultTimeout(15000);
   await page.addInitScript(() => {
     Math.random = () => .5;
-    const context = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (...args) { return this.id === 'shader-canvas' ? null : context.apply(this, args); };
   });
   await page.clock.install({ time: new Date('2026-01-01T00:00:00Z') });
   await page.clock.pauseAt(new Date('2026-01-01T00:00:00Z'));

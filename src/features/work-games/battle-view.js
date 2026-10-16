@@ -1,15 +1,17 @@
 import { drawPickupMarker } from './pickup-presentation.js';
-// Canvas owns transient combat effects; the captured satellites remain DOM artwork.
-export function mountBattleView(layer, scale = 1) {
+// Canvas2D owns combat artwork; the shared scene composites its image below the formation.
+export function mountBattleView(layer, scale = 1, surfaceRatio = () => devicePixelRatio || 1) {
   const canvas = document.createElement('canvas'); canvas.className = 'game-effects'; canvas.setAttribute('aria-hidden', 'true');
   layer.prepend(canvas);
   const context = canvas.getContext('2d');
+  const frame = { canvas, revision: 0 };
   function resize() {
     // The parent applies world scale; rasterize at screen density, not world density.
-    const ratio = Math.min(devicePixelRatio || 1, 2) * scale;
+    const ratio = Math.min(surfaceRatio(), 2) * scale;
     canvas.width = innerWidth / scale * ratio; canvas.height = innerHeight / scale * ratio;
     canvas.style.width = `${innerWidth / scale}px`; canvas.style.height = `${innerHeight / scale}px`;
     context?.setTransform(ratio, 0, 0, ratio, 0, 0);
+    frame.revision++;
   }
   resize();
   function draw(state, bounds) {
@@ -73,6 +75,7 @@ export function mountBattleView(layer, scale = 1) {
       context.fillRect(particle.x - 1, particle.y - 1, 2, 2);
     }
     context.restore();
+    frame.revision++;
   }
-  return { resize, draw };
+  return { resize, draw, frame };
 }

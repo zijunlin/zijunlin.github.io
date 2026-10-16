@@ -56,12 +56,6 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
   test(`about remains within the viewport with internal scrolling at ${viewport.width}×${viewport.height}`, async ({ page }) => {
     test.setTimeout(120000);
     await page.setViewportSize(viewport);
-    await page.addInitScript(() => {
-      const original = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-        return type === 'webgl' ? null : original.call(this, type, ...args);
-      };
-    });
     for (const seed of [0, 4]) {
       await page.goto(`/?seed=${seed}`);
       const world = page.getByRole('region', { name: /星辰圆点/ });
@@ -93,7 +87,7 @@ for (const viewport of [{ width: 1024, height: 768 }, { width: 1280, height: 720
 test('about remains readable when world rendering is unavailable', async ({ page }) => {
   await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
   await page.goto('/?seed=0');
-  await expect(page.locator('.celestial-stage')).toBeVisible();
+  await expect(page.locator('.world-fallback')).toBeVisible();
   await page.getByRole('navigation').getByRole('link', { name: '关于', exact: true }).click();
   await expect(page.getByRole('region', { name: '关于我', exact: true }).getByRole('heading', { name: '林子钧' })).toBeVisible();
 });

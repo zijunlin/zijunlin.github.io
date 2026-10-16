@@ -40,12 +40,6 @@ test('world and navigation open the same compact work directory', async ({ page 
 test('work directory preserves both layouts and panel state', async ({ page }) => {
   test.setTimeout(120000);
   await page.setViewportSize({ width: 1024, height: 768 });
-  await page.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function(type, ...args) {
-      return type === 'webgl' ? null : original.call(this, type, ...args);
-    };
-  });
   for (const seed of [0, 4]) {
     await page.goto(`/?seed=${seed}`);
     const world = page.getByRole('region', { name: /星辰圆点/ });

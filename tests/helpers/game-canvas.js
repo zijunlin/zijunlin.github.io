@@ -1,3 +1,4 @@
+import { drawnShipBox } from './game-drawing.js';
 export async function greenResourcePixels(page) {
   return page.locator('.game-effects').evaluate(canvas => {
     const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
@@ -7,8 +8,8 @@ export async function greenResourcePixels(page) {
 }
 
 export async function forwardFanLanes(page) {
-  return page.locator('.game-effects').evaluate(canvas => {
-    const ship = document.querySelector('.game-ship').getBoundingClientRect();
+  const box = await drawnShipBox(page);
+  return page.locator('.game-effects').evaluate((canvas, ship) => {
     const cx = ship.x + 13.2, cy = ship.y + 16.5;
     const ratio = canvas.width / innerWidth;
     const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
@@ -22,7 +23,7 @@ export async function forwardFanLanes(page) {
       }
     }
     return [...lanes].sort();
-  });
+  }, box);
 }
 
 // Count rendered colors without exposing or mutating simulation state.

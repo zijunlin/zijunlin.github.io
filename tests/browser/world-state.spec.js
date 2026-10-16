@@ -1,9 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-// World selection does not depend on GPU capability.
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
-});
+// Normal layout selection is checked with the real shared graphics surface.
 
 test('a fixed seed selects a celestial layout before the scene is shown', async ({ page }) => {
   await page.goto('/?seed=514018');
@@ -48,7 +45,6 @@ test('a new tab without session state uses its own entry time', async ({ page, c
   await page.goto('/');
   await expect(page.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 成长路径');
   const other = await context.newPage();
-  await other.addInitScript(() => { HTMLCanvasElement.prototype.getContext = () => null; });
   await other.clock.setFixedTime(new Date('2026-10-05T18:00:00Z'));
   await other.goto('/');
   await expect(other.getByLabel('世界形态与空间布局')).toHaveText('软件工程 · 持续探索');
