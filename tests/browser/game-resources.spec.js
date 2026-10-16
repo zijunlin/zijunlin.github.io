@@ -1,6 +1,6 @@
 import { observeGameDrawing } from '../helpers/game-drawing.js';
 test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
-import { greenResourcePixels, forwardFanLanes } from '../helpers/game-canvas.js';
+import { greenResourcePixels, forwardFanLanes, canvasColorPixels } from '../helpers/game-canvas.js';
 import { test, expect } from '@playwright/test';
 import { mkdirSync } from 'node:fs';
 const evidence = process.env.GAME_EVIDENCE_DIR;
@@ -57,11 +57,7 @@ test('orange ring drops refill the visible shockwave reserve', async ({ page }) 
   await expect(page.getByText('星际生存', { exact: true })).toBeVisible();
   // Wait until the real twelfth target is destroyed; the paused clock removes wall-time drift.
   await page.clock.runFor(12000);
-  const orangePixels = await page.locator('.game-effects').evaluate(canvas => {
-    const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-    let count = 0; for (let i = 0; i < data.length; i += 4) if (data[i] === 255 && data[i + 1] === 187 && data[i + 2] === 102) count++;
-    return count;
-  });
+  const orangePixels = await canvasColorPixels(page, [255, 187, 102]);
   expect(orangePixels).toBeGreaterThan(10);
   if (evidence) await page.screenshot({ path: `${evidence}/${motion}-orange-resource.png` });
   await page.keyboard.down('ArrowUp'); await page.clock.runFor(2200); await page.keyboard.up('ArrowUp');

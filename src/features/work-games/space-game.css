@@ -6,12 +6,10 @@
 .space-game button:focus-visible { outline:2px solid #d4fafb; outline-offset:3px; }
 .game-modal { pointer-events:auto; color:#dcebed; background:#111b24; border:1px solid #78949e; border-radius:18px; padding:28px; max-width:min(440px,85vw); }
 .game-modal::backdrop { background:#02070b88; }
-.game-effects { visibility:hidden; position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
 
 
 .space-game:focus { outline: none; }
 
-.game-visuals { position:absolute; inset:0; transform-origin:0 0; pointer-events:none; }
 .game-touch { position:absolute; inset:0; pointer-events:auto; touch-action:none; user-select:none; }
 .game-controls { position:absolute; inset:0; pointer-events:none; }
 .game-wave { position:absolute; right:max(12px, env(safe-area-inset-right)); bottom:max(16px, env(safe-area-inset-bottom)); min-height:48px; touch-action:manipulation; }

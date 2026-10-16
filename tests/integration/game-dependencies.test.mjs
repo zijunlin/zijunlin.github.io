@@ -42,3 +42,12 @@ test('shared scene ships no retired SVG animation stylesheet or clone adapter', 
     assert.doesNotMatch(source, /\.orb-(?:art|halo|disc|pulse|particles|inflow|infall|circulating|satellite)\b|@keyframes orb-|cloneNode|createElementNS/, path);
   }
 });
+
+// The production graph must render combat directly in the shared context.
+test('production graphics has no Canvas2D combat source or canvas upload adapter', async () => {
+  const files = await runtimeFiles(new URL('../../src/', import.meta.url));
+  for (const file of files) {
+    const source = await readFile(file, 'utf8');
+    assert.doesNotMatch(source, /getContext\(\s*['"]2d['"]|OffscreenCanvas|game-effects|game-visuals|battle-composite|battle-view/, file.pathname);
+  }
+});

@@ -87,7 +87,7 @@ test('ship reaches the navigation and viewport edges and travels beneath the HUD
   await expect(page.locator('.game-hud')).toHaveCSS('pointer-events', 'none');
   // Hit-test the overlapping paint layers with pointer events temporarily enabled.
   const aboveShip = await page.evaluate(({ x, y }) => {
-    const nodes = [...document.querySelectorAll('.game-hud, #shader-canvas, .game-effects')];
+    const nodes = [...document.querySelectorAll('.game-hud, #shader-canvas')];
     const old = nodes.map(node => node.style.pointerEvents);
     nodes.forEach(node => { node.style.pointerEvents = 'auto'; });
     const top = document.elementFromPoint(x, y);

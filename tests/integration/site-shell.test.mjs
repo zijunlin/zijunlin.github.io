@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, readdir } from "node:fs/promises";
 import test from "node:test";
 
 const projectRoot = new URL("../../", import.meta.url);
@@ -12,6 +12,11 @@ test("production artifact exposes only the world homepage", async () => {
     stdio: "pipe"
   });
 
+  for (const asset of await readdir(new URL('assets/', buildRoot))) {
+    if (!/\.(?:js|css)$/.test(asset)) continue;
+    const source = await readFile(new URL(`assets/${asset}`, buildRoot), 'utf8');
+    assert.doesNotMatch(source, /getContext\(\s*['"`]2d['"`]|OffscreenCanvas|game-effects|game-visuals/, asset);
+  }
   const html = await readFile(new URL("index.html", buildRoot), "utf8");
   await assert.rejects(access(new URL("platform.html", buildRoot)), { code: "ENOENT" });
   const stylesheets = [];

@@ -1,4 +1,6 @@
+import { advanceUntil } from '../helpers/game-scenario.js';
 import { test, expect } from '@playwright/test';
+import { PNG } from 'pngjs';
 import { entranceCenters, trajectorySample, trailContrast } from '../helpers/trail-pixels.js';
 import { imageDifference } from '../helpers/image-difference.mjs';
 import { observeGameDrawing, drawnShipBox, shipScreenshot, expectSatellites } from '../helpers/game-drawing.js';
@@ -17,11 +19,12 @@ async function restore(page) {
   await page.evaluate(() => window.loss.restoreContext());
   await expect(page.locator('#shader-canvas')).toBeVisible();
 }
-async function enter(page, opening = false) {
+async function enter(page, opening = false, beforeGame) {
   await page.clock.install();
   await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
   await page.goto('/?seed=0');
   await expect(page.locator('.celestial-gate')).toHaveCount(4);
+  await beforeGame?.();
   await page.keyboard.press('Shift+G');
   await expect(page.locator('.space-game')).toBeVisible();
   if (opening) return;
@@ -154,6 +157,17 @@ async function observeRecoveryResources(page) {
   await page.addInitScript(() => {
     const contexts = new Set(), live = new Map();
     let invalidated = 0, deletes = 0, draws = 0;
+    const frames = new Set();
+    // Install after Playwright's page clock so it cannot replace this observer.
+    window.observeRecoveryFrames = () => {
+      const request = window.requestAnimationFrame, cancel = window.cancelAnimationFrame;
+      window.requestAnimationFrame = callback => {
+        const id = request.call(window, now => { frames.delete(id); callback(now); });
+        frames.add(id); return id;
+      };
+      window.cancelAnimationFrame = id => { frames.delete(id); return cancel.call(window, id); };
+      window.dispatchEvent(new Event('blur')); window.dispatchEvent(new Event('focus'));
+    };
     const getContext = HTMLCanvasElement.prototype.getContext;
     HTMLCanvasElement.prototype.getContext = function (...args) {
       const gl = getContext.apply(this, args);
@@ -181,14 +195,15 @@ async function observeRecoveryResources(page) {
     }
     const draw = WebGLRenderingContext.prototype.drawArrays;
     WebGLRenderingContext.prototype.drawArrays = function (...args) { draws++; return draw.apply(this, args); };
-    window.recoveryResources = () => ({ contexts: contexts.size, invalidated, deletes, draws,
+    window.recoveryResources = () => ({ contexts: contexts.size, invalidated, deletes, draws, pendingFrames: frames.size,
       live: Object.fromEntries([...live].map(([kind, values]) => [kind, values.size])) });
   });
 }
 
 test('opening, results and returning survive repeated real losses without reviving an ended battle', async ({ page }, info) => {
   await observeRecoveryResources(page);
-  await enter(page, true);
+  let homeBaseline;
+  await enter(page, true, async () => { homeBaseline = await page.evaluate(() => window.recoveryResources()); });
   await page.clock.runFor(1600);
   const initial = await page.evaluate(() => window.recoveryResources());
   const observations = [initial];
@@ -222,13 +237,12 @@ test('opening, results and returning survive repeated real losses without revivi
   await expect(page.locator('.celestial-gate').first()).toBeVisible();
   const home = await page.evaluate(() => window.recoveryResources());
   expect(home.contexts).toBe(1);
-  expect(home.live.Texture).toBe(initial.live.Texture - 3);
-  expect(home.live.Framebuffer).toBe(initial.live.Framebuffer - 1);
+  expect(home.live).toEqual(homeBaseline.live);
   observations.push(home);
   await info.attach('resource-lifetimes', { body: JSON.stringify(observations, null, 2), contentType: 'application/json' });
 });
 
-for (const failure of ['timeout', 'allocation', 'lost-again']) {
+for (const failure of ['timeout', 'allocation', 'buffer-allocation', 'lost-again']) {
   test(`${failure} terminates recovery and leaves static navigation accessible`, async ({ page }, info) => {
     await observeRecoveryResources(page);
     await enter(page);
@@ -236,8 +250,9 @@ for (const failure of ['timeout', 'allocation', 'lost-again']) {
     if (failure === 'timeout') await page.clock.runFor(8100);
     else {
       await page.evaluate(mode => {
-        const original = WebGLRenderingContext.prototype.createTexture;
-        WebGLRenderingContext.prototype.createTexture = function () {
+        const method = mode === 'buffer-allocation' ? 'createBuffer' : 'createTexture';
+        const original = WebGLRenderingContext.prototype[method];
+        WebGLRenderingContext.prototype[method] = function () {
           if (mode === 'lost-again') window.loss.loseContext();
           else return null;
           return original.call(this);
@@ -324,3 +339,127 @@ test.describe('phone input after recovery', () => {
     await shipScreenshot(page, { path: info.outputPath('phone-restored-drag.png') });
   });
 });
+
+// Only the temporary dialog occlusion is removed for the screenshot; these are
+// the actual final shared-surface pixels, never a separate combat rendering.
+async function combatMask(page, info, name) {
+  const image = PNG.sync.read(await page.screenshot({ scale: 'css', path: info.outputPath(`${name}.png`),
+    style: 'dialog { visibility: hidden !important; } dialog::backdrop { background: transparent !important; }' }));
+  const colors = { shots: [201, 245, 250], wave: [155, 232, 255] };
+  return Object.fromEntries(Object.entries(colors).map(([kind, color]) => {
+    const points = [];
+    // The lower-middle arena avoids header/HUD text and the center dialog.
+    for (let y = 480; y < image.height - 65; y++) for (let x = 350; x < image.width - 350; x++) {
+      const i = (y * image.width + x) * 4;
+      if (color.every((v, c) => Math.abs(image.data[i + c] - v) <= 6)) points.push(y * image.width + x);
+    }
+    return [kind, points];
+  }));
+}
+function expectFrozenCombat(before, after) {
+  for (const kind of ['shots', 'wave']) {
+    expect(before[kind].length, `visible ${kind} before losing context`).toBeGreaterThan(20);
+    const restored = new Set(after[kind]);
+    const common = before[kind].filter(point => restored.has(point)).length;
+    expect(common / Math.max(before[kind].length, after[kind].length), `${kind} retain their actual pixel locations`).toBeGreaterThan(.98);
+  }
+}
+for (const phase of ['battle', 'paused', 'results']) {
+  test(`${phase} combat pixels survive reconstruction and remain frozen until public continuation`, async ({ page }, info) => {
+    await page.addInitScript(() => { Math.random = () => .1; });
+    await enter(page);
+    await page.clock.runFor(350);
+    await page.keyboard.press('Space'); await page.clock.runFor(180);
+    if (phase === 'paused') await page.keyboard.press('p');
+    if (phase === 'results') await page.keyboard.press('Escape');
+    const score = await page.locator('.game-score').textContent();
+    const before = await combatMask(page, info, `${phase}-before`);
+    await lose(page); await page.clock.runFor(1000);
+    await expect(page.locator('.game-score')).toHaveText(score);
+    await restore(page);
+    expectFrozenCombat(before, await combatMask(page, info, `${phase}-restored`));
+    await page.clock.runFor(1000);
+    await expect(page.locator('.game-score')).toHaveText(score);
+    expectFrozenCombat(before, await combatMask(page, info, `${phase}-still-frozen`));
+    if (phase === 'results') {
+      await expect(page.getByRole('button', { name: '继续游戏', exact: true })).toHaveCount(0);
+      await page.getByRole('button', { name: '再来一局', exact: true }).click();
+      await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+      await expect(page.locator('.game-score')).toContainText('存活: 0.0s');
+    } else await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+    await page.clock.runFor(400);
+    const continued = await combatMask(page, info, `${phase}-continued`);
+    expect(continued.shots.length, 'new frames still contain visible shots').toBeGreaterThan(20);
+    expect(continued.wave.length, 'old frozen wave is gone after continuation or replay').toBe(0);
+    await expect(page.locator('.game-score')).not.toHaveText(score);
+  });
+}
+
+
+for (const motion of ['reduce', 'no-preference']) {
+test.describe(`combat cleanup ${motion}`, () => {
+  test.use({ reducedMotion: motion });
+test('returning and cancelled recoveries remove combat and repeated entries own one frame chain', async ({ page }, info) => {
+  await observeRecoveryResources(page);
+  await page.addInitScript(() => { Math.random = () => .1; });
+  await page.clock.install();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.goto('/?seed=0');
+  await expect(page.locator('.celestial-gate')).toHaveCount(4);
+  await page.bringToFront();
+  await page.evaluate(() => window.observeRecoveryFrames());
+  await page.clock.runFor(100);
+  const home = await page.evaluate(() => window.recoveryResources());
+  expect(home.pendingFrames).toBe(1);
+  let battleResources;
+  const observations = [home];
+  for (const exit of ['returning', 'recovery-cancel', 'navigation-cancel']) {
+    await page.keyboard.press('Shift+G');
+    await expect(page.locator('.space-game')).toBeVisible();
+    expect((await combatMask(page, info, `${exit}-opening`)).shots).toHaveLength(0);
+    await page.clock.runFor(3650);
+    await expect(page.locator('.game-shockwave')).toContainText('1 / 3');
+    await page.keyboard.press('Space'); await page.clock.runFor(180);
+    const combat = await combatMask(page, info, `${exit}-battle`);
+    expect(combat.shots.length).toBeGreaterThan(20);
+    expect(combat.wave.length).toBeGreaterThan(20);
+    const active = await page.evaluate(() => window.recoveryResources());
+    battleResources ??= active.live;
+    expect(active.live).toEqual(battleResources);
+    expect(active.contexts).toBe(1); expect(active.pendingFrames).toBe(1);
+    if (exit === 'returning') {
+      await page.keyboard.press('Escape');
+      await page.getByRole('button', { name: '返回首页', exact: true }).click();
+      const returning = await combatMask(page, info, 'returning-cleared');
+      expect(returning.shots).toHaveLength(0); expect(returning.wave).toHaveLength(0);
+    }
+    await lose(page);
+    expect((await page.evaluate(() => window.recoveryResources())).pendingFrames).toBe(0);
+    if (exit === 'recovery-cancel') await page.getByRole('button', { name: '返回首页', exact: true }).click();
+    if (exit === 'navigation-cancel') {
+      await page.evaluate(() => { location.hash = '#about'; });
+      await expect(page.getByRole('region', { name: '关于我', exact: true })).toBeVisible();
+    }
+    await restore(page);
+    const restored = await combatMask(page, info, `${exit}-restored`);
+    expect(restored.shots).toHaveLength(0); expect(restored.wave).toHaveLength(0);
+    if (exit === 'returning') {
+      await page.getByRole('button', { name: '继续游戏', exact: true }).click();
+      await page.clock.runFor(400);
+    }
+    if (exit === 'navigation-cancel') await page.keyboard.press('Escape');
+    await advanceUntil(page, async () => await page.locator('.space-game').count() === 0,
+      { timeout:3000, step:100, description:'public return animation completion' });
+    await expect(page.locator('.space-game')).toHaveCount(0);
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(page.locator('.celestial-gate').first()).toBeVisible();
+    const released = await page.evaluate(() => window.recoveryResources());
+    expect(released.live).toEqual(home.live);
+    expect(released.contexts).toBe(1); expect(released.pendingFrames).toBe(1);
+    observations.push(active, released);
+  }
+  await info.attach('combat-resource-cycles', { body: JSON.stringify(observations, null, 2), contentType: 'application/json' });
+});
+
+});
+}

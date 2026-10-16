@@ -109,9 +109,9 @@ test('a second finger cancels pending movement until all fingers are released', 
   await client.detach();
 });
 
-test('mobile combat canvas uses viewport pixel density instead of magnifying its backing store', async ({ page }) => {
+test('mobile combat shares the viewport pixel budget', async ({ page }) => {
   await enter(page);
-  const raster = await page.locator('.game-effects').evaluate(canvas => ({
+  const raster = await page.locator('#shader-canvas').evaluate(canvas => ({
     width: canvas.width, height: canvas.height,
     expectedWidth: 390,
     expectedHeight: 844,

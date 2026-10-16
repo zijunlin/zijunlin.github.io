@@ -2,7 +2,6 @@ import css from './space-game.css?inline';
 import { mountGamePerformance } from './game-performance.js';
 import { createBattle } from './battle.js';
 import { constrainShipPosition } from './rules.js';
-import { mountBattleView } from './battle-view.js';
 import { describePickup } from './pickup-presentation.js';
 
 export function startGame({ presentation, leave, text }) {
@@ -21,14 +20,11 @@ export function startGame({ presentation, leave, text }) {
   // Use one uniform world scale for drawing, collision and movement. Keep it
   // stable throughout a run, including orientation changes.
   const scale = innerWidth >= 800 && innerHeight >= 600 ? 1 : Math.max(.5, Math.min(innerWidth, innerHeight) / 800);
-  const visuals = document.createElement('div'); visuals.className = 'game-visuals';
-  visuals.style.transform = `scale(${scale})`; panel.append(visuals);
   const point = value => ({ ...value, x: value.x / scale, y: value.y / scale, size: value.size / scale });
-  const gamePerformance = mountGamePerformance({ onFrame: draw, effects: () => view.frame, presentation: {
+  const gamePerformance = mountGamePerformance({ onFrame: draw, effects: () => battle && (phase === 'battle' || phase === 'results') ? { state: battle.state, bounds: bounds(), scale } : null, presentation: {
     ...presentation, satellites: presentation.satellites.map(point),
     returnTargets: () => presentation.returnTargets().map(point),
   }, reduced, scale });
-  const view = mountBattleView(visuals, scale, () => presentation.graphics.pixelRatio);
   const controls = document.createElement('div'); controls.className = 'game-controls';
   const waveButton = document.createElement('button');
   waveButton.className = 'game-wave';
@@ -106,14 +102,13 @@ export function startGame({ presentation, leave, text }) {
     resetPlayback(false);
     labels();
     gamePerformance.advance(0, bounds(), battle.state);
-    view.draw(battle.state, bounds());
   }
   function returnHome() {
     if (!presentation.graphics.available) { leave(); return; }
     if (phase === 'returning' || disposed) return;
     gamePerformance.returnHome();
     phase = 'returning'; resetPlayback(false); closeDialog();
-    controls.hidden = true; surface.hidden = true; hud.hidden = true; panel.querySelector('.game-effects').hidden = true;
+    controls.hidden = true; surface.hidden = true; hud.hidden = true;
     panel.focus({ preventScroll: true });
     presentation.graphics.redraw();
   }
@@ -131,7 +126,7 @@ export function startGame({ presentation, leave, text }) {
       [text('再来一局', 'Play again'), () => {
         if (!canResume()) return;
         closeDialog(); beginBattle(); panel.focus({ preventScroll: true });
-        view.resize(); presentation.graphics.redraw();
+        presentation.graphics.redraw();
       }],
       [text('返回首页', 'Return home'), returnHome],
     ]);
@@ -153,7 +148,7 @@ export function startGame({ presentation, leave, text }) {
         y: Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup')),
       });
       if (dt > 0) shockwavePending = false;
-      updateScore(); view.draw(battle.state, bounds());
+      updateScore();
       if (battle.state.ended) { gamePerformance.advance(dt, bounds(), battle.state); finish(); return; }
     }
     if (phase === 'battle') gamePerformance.advance(dt, bounds(), battle.state);
@@ -161,7 +156,7 @@ export function startGame({ presentation, leave, text }) {
   function resume() {
     if (!paused || phase === 'results' || !canResume()) return;
     closeDialog(); resetPlayback(false);
-    battle?.resize(bounds()); view.resize();
+    battle?.resize(bounds());
     panel.focus({ preventScroll: true }); presentation.graphics.redraw();
   }
   function pause() {
@@ -192,9 +187,10 @@ export function startGame({ presentation, leave, text }) {
   window.addEventListener('resize', () => {
     arena = null; clearDrag();
     const widthChanged = Math.abs(innerWidth - viewportWidth) > 2; viewportWidth = innerWidth;
-    battle?.resize(bounds()); view.resize();
+    battle?.resize(bounds());
     if (!touch || widthChanged || !canResume()) pause();
-    else if (battle) { gamePerformance.advance(0, bounds(), battle.state); view.draw(battle.state, bounds()); }
+    if (battle && (phase === 'battle' || phase === 'results')) gamePerformance.advance(0, bounds(), battle.state);
+    presentation.graphics.redraw();
   }, { signal });
   screen.orientation?.addEventListener('change', pause, { signal });
   waveButton.addEventListener('click', () => { if (phase === 'battle' && !paused) shockwavePending = true; }, { signal });

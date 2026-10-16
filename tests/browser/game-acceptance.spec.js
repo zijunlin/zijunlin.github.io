@@ -1,3 +1,4 @@
+import { sharedImage } from '../helpers/game-canvas.js';
 import { observeGameDrawing, drawnShipBox, expectSatellites } from '../helpers/game-drawing.js';
 test.beforeEach(async ({ page }) => { await page.addInitScript(observeGameDrawing); });
 import { test, expect } from '@playwright/test';
@@ -44,28 +45,27 @@ for (const viewport of [{ width: 800, height: 600 }, { width: 1280, height: 720 
       expect((await drawnShipBox(page)).x).toBe(resetPosition.x);
       await page.keyboard.up('ArrowRight');
       expect(await page.evaluate(() => window.pendingFrames())).toBe(gameFrames);
-      const visibleShots = await page.locator('.game-effects').evaluate(canvas => {
-        const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data;
-        const seen = new Uint8Array(canvas.width * canvas.height);
-        let count = 0;
-        for (let pixel = 0; pixel < seen.length; pixel++) {
-          if (seen[pixel] || data[pixel * 4 + 3] < 20) continue;
-          count++;
-          const queue = [pixel]; seen[pixel] = 1;
-          while (queue.length) {
-            const current = queue.pop();
-            for (const next of [current - 1, current + 1, current - canvas.width, current + canvas.width]) {
-              if (next < 0 || next >= seen.length || seen[next] || data[next * 4 + 3] < 20) continue;
-              seen[next] = 1; queue.push(next);
-            }
+      const image = await sharedImage(page);
+      const { data, width, height } = image;
+      const seen = new Uint8Array(width * height);
+      const shot = pixel => [201, 245, 250].every((value, channel) => Math.abs(data[pixel * 4 + channel] - value) <= 6);
+      let visibleShots = 0;
+      for (let pixel = 0; pixel < seen.length; pixel++) {
+        if (seen[pixel] || !shot(pixel)) continue;
+        const queue = [pixel]; seen[pixel] = 1; let area = 0;
+        while (queue.length) {
+          const current = queue.pop(); area++;
+          for (const next of [current - 1, current + 1, current - width, current + width]) {
+            if (next < 0 || next >= seen.length || seen[next] || !shot(next)) continue;
+            seen[next] = 1; queue.push(next);
           }
         }
-        return count;
-      });
+        if (area >= 3 && area < 100) visibleShots++;
+      }
       // Two volleys: dual forward shots plus three visible radial shots. Downward shots have left the arena.
       expect(visibleShots).toBe(10);
       await expect(page.locator('.game-score')).toContainText('存活: 0.3s');
-      await expect(page.locator('.game-effects')).toHaveCount(1);
+      await expect(page.locator('#shader-canvas')).toBeVisible();
       await expectSatellites(page);
     }
     await page.keyboard.press('Escape');

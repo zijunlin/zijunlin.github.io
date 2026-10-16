@@ -1,5 +1,5 @@
 import { createOrbLayer } from '../scene/orb-layer.js';
-import { createBattleComposite } from './battle-composite.js';
+import { createBattleLayer } from './battle-layer.js';
 import { createShipLayer } from './ship-layer.js';
 import { returningOrbAppearance } from '../scene/orb-scene.js';
 import { shipAppearance } from './ship-appearance.js';
@@ -15,7 +15,7 @@ function mountArtwork(graphics, captures, reduced, scale, onFrame, effects) {
   const ship = { x: 0, y: 0, opacity: 0, scale };
   let disposed = false;
   const layer = graphics.addLayer((gl, resources) => {
-    const combat = createBattleComposite(gl, resources, effects);
+    const combat = createBattleLayer(gl, resources, effects);
     const orbs = createOrbLayer(gl, resources, () => satellites);
     const hull = createShipLayer(gl, resources, () => ship);
     return { draw(frame) {

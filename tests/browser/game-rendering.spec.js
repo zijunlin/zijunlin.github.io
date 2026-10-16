@@ -1,4 +1,4 @@
-import { observeGameDrawing, expectSatellites } from '../helpers/game-drawing.js';
+import { observeGameDrawing, expectSatellites, drawnShipBox } from '../helpers/game-drawing.js';
 import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 import { imageDifference } from '../helpers/image-difference.mjs';
@@ -130,11 +130,10 @@ test('switching to reduced motion settles keyboard focus feedback immediately', 
 });
 
 
-test('shared surface displays the ship and cockpit while battle effects keep their own canvas', async ({ page }, info) => {
+test('shared surface displays the ship and cockpit', async ({ page }, info) => {
   await page.keyboard.press('Shift+G');
   await expect(page.locator('.space-game')).toBeVisible();
   await page.clock.runFor(3300);
-  const isolated = await page.addStyleTag({ content: '.game-visuals { visibility: hidden; }' });
   const rendered = PNG.sync.read(await page.locator('#shader-canvas').screenshot({ path: info.outputPath('native-ship.png') }));
   let cockpit = 0;
   for (let y = 740; y < 760; y++) for (let x = 630; x < 650; x++) {
@@ -142,8 +141,7 @@ test('shared surface displays the ship and cockpit while battle effects keep the
     if (rendered.data[at] > 220 && rendered.data[at + 1] > 248 && rendered.data[at + 2] > 248) cockpit++;
   }
   expect(cockpit, 'visible cockpit must be drawn in the shared graphics surface').toBeGreaterThan(3);
-  await isolated.evaluate(node => node.remove());
-  await expect(page.locator('.game-effects')).toBeAttached();
+  await expect(page.locator('#shader-canvas')).toBeVisible();
 });
 
 test('a real shockwave stays behind the opaque ship silhouette', async ({ page }, info) => {
@@ -152,18 +150,29 @@ test('a real shockwave stays behind the opaque ship silhouette', async ({ page }
   await page.clock.runFor(3300);
   const before = PNG.sync.read(await page.screenshot({ path: info.outputPath('before-shockwave.png') }));
   await page.keyboard.press('Space');
-  let intersections = [];
-  for (let frame = 0; frame < 3 && intersections.length < 5; frame++) {
-    await page.clock.runFor(16);
-    const wave = await page.locator('.game-effects').evaluate(canvas => {
-      const data = canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data, pixels = [];
-      for (let i = 0; i < data.length; i += 4) if (data[i] === 155 && data[i + 1] === 232 && data[i + 2] === 255 && data[i + 3] > 240) pixels.push(i);
-      return pixels;
-    });
-    intersections = wave.filter(i => Math.abs(before.data[i] - 167) < 2 && Math.abs(before.data[i + 1] - 233) < 2 && Math.abs(before.data[i + 2] - 237) < 2);
-  }
-  expect(intersections.length, 'real Canvas2D shockwave intersects at least five opaque hull pixels').toBeGreaterThanOrEqual(5);
+  await page.clock.runFor(16);
   const after = PNG.sync.read(await page.screenshot({ path: info.outputPath('overlapping-shockwave.png') }));
-  const difference = intersections.reduce((sum, at) => sum + [0, 1, 2].reduce((n, c) => n + Math.abs(after.data[at + c] - before.data[at + c]), 0), 0) / (intersections.length * 3);
-  expect(difference, 'the existing opaque hull still covers the wave at every overlapping pixel').toBeLessThan(2);
+  const ship = await drawnShipBox(page);
+  const cx = ship.x + 13.2, cy = ship.y + 16.5;
+  const radii = [];
+  for (let y = Math.floor(cy - 24); y < cy + 24; y++) for (let x = Math.floor(cx - 24); x < cx + 24; x++) {
+    const i = (y * after.width + x) * 4;
+    if ([155,232,255].every((v,c) => Math.abs(after.data[i+c]-v) <= 6)) radii.push(Math.hypot(x+.5-cx,y+.5-cy));
+  }
+  expect(radii.length, 'visible ring fragments establish its radius').toBeGreaterThan(10);
+  const radius = radii.sort((a,b) => a-b)[Math.floor(radii.length / 2)];
+  let ring = 0, hull = 0, difference = 0;
+  // The first wave straddles the lower hull and open space. Require its visible
+  // arc beside the ship and unchanged opaque hull pixels within the same area.
+  for (let y = 725; y < 790; y++) for (let x = 605; x < 675; x++) {
+    const i = (y * after.width + x) * 4;
+    if ([155, 232, 255].every((v, c) => Math.abs(after.data[i + c] - v) <= 6)) ring++;
+    if (Math.abs(Math.hypot(x+.5-cx,y+.5-cy)-radius) < .75 && [167, 233, 237].every((v, c) => Math.abs(before.data[i + c] - v) < 2)) {
+      hull++;
+      difference += [0, 1, 2].reduce((sum, c) => sum + Math.abs(after.data[i + c] - before.data[i + c]), 0);
+    }
+  }
+  expect(ring, 'the wave arc is visible beside the opaque ship').toBeGreaterThan(10);
+  expect(hull, 'the same region includes opaque hull').toBeGreaterThan(5);
+  expect(difference / (hull * 3), 'the opaque hull pixels on the actual visible annulus cover the overlapping wave').toBeLessThan(2);
 });

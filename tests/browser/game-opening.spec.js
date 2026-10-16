@@ -121,7 +121,7 @@ test('navigation interrupts a return without a late focus change', async ({ page
   await page.clock.runFor(3000);
   await expect(page).toHaveURL(/#about$/);
   await expect(page.locator('#about-panel-title')).toBeFocused();
-  await expect(page.locator('.space-game, .game-effects')).toHaveCount(0);
+  await expect(page.locator('.space-game')).toHaveCount(0);
   await page.keyboard.press('Escape');
   expect(trailContrast(await page.screenshot(), probe.point, probe.tangent, page.viewportSize())).toBeGreaterThan(3);
   await expect(page.locator('.celestial-gate').first()).toBeVisible();
