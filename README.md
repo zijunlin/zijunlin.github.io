@@ -4,7 +4,7 @@ A personal website built with Vite and published to GitHub Pages.
 
 ## Local development
 
-Requires Node.js 22.12 or later.
+Requires Node.js 22.12 or later. Tests for repository tools also require ripgrep (`rg`).
 
 ```sh
 npm ci
@@ -15,11 +15,12 @@ npm run dev
 
 ```sh
 npm test
+npm run test:smoke
 npm run test:browser
 npm run build
 ```
 
-Browser checks require Chrome. Run build and test commands sequentially because they share build output.
+Browser checks require Chrome (`npx playwright install chrome` if it is not installed). Run build and test commands sequentially because they share build output.
 
 ## Deployment
 

@@ -125,3 +125,30 @@ test('launch errors retain diagnostics and unlock the worktree for the next chec
   assert.equal(passed.exitCode, 0);
   assert.equal((await readFile(passed.log, 'utf8')).trim(), literal);
 });
+
+test('managed service stop releases the command lock and preserves its log', async t => {
+  const { serviceStatus } = await import('../../scripts/preview-service.mjs');
+  const { root } = await fixture(t);
+  await initialize(root, { base: 'HEAD' });
+  const running = run(root, { label: 'preview fixture', kind: 'service',
+    argv: [process.execPath, '-e', 'console.log("service ready"); setInterval(() => {}, 1000)'] });
+  const directory = join(root, '.scratch/worktree');
+  let status;
+  try {
+    for (let attempt = 0; attempt < 100; attempt++) {
+      status = await serviceStatus(root, directory);
+      if (status.state === 'running' && (await readFile(status.log, 'utf8')).includes('service ready')) break;
+      await new Promise(resolve => setTimeout(resolve, 25));
+    }
+    assert.equal(status.state, 'running');
+  } finally {
+    await serviceStatus(root, directory, { stop: true });
+    await running;
+  }
+  const record = await running;
+  assert.equal(record.signal, 'SIGTERM');
+  assert.ok((await readFile(record.log, 'utf8')).includes('service ready'));
+  assert.equal((await serviceStatus(root, directory)).state, 'stopped');
+  const next = await run(root, { label: 'next check', argv: [process.execPath, '-e', ''] });
+  assert.equal(next.exitCode, 0);
+});

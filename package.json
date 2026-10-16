@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "node --test tests/unit/*.test.mjs tests/integration/*.test.mjs",
     "test:browser": "playwright test",
-    "worktree": "node scripts/worktree.mjs"
+    "worktree": "node scripts/worktree.mjs",
+    "test:smoke": "playwright test --config playwright.smoke.config.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",

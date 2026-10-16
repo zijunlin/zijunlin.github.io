@@ -1,3 +1,4 @@
+import { trackService } from './preview-service.mjs';
 import { execFileSync, spawn } from 'node:child_process';
 import { createHash, randomUUID } from 'node:crypto';
 import { finished } from 'node:stream/promises';
@@ -118,7 +119,7 @@ async function dependencies(root, donor, log) {
   if (result.exitCode !== 0) throw new Error(`npm ci failed; see ${log}`);
   return { method: 'npm ci', lockHash, node: process.version, identity: await dependencyIdentity(root) };
 }
-async function execute(root, argv, log, env = {}, { quiet = false } = {}) {
+async function execute(root, argv, log, env = {}, { quiet = false, service } = {}) {
   const logHandle = await open(log, 'w');
   const stream = logHandle.createWriteStream();
   const child = spawn(argv[0], argv.slice(1), { cwd: root, env: { ...process.env, ...env }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -131,7 +132,12 @@ async function execute(root, argv, log, env = {}, { quiet = false } = {}) {
   child.stderr.on('data', data => { stream.write(data); if (!quiet) process.stderr.write(data); });
   let launchError;
   child.once('error', error => { launchError = String(error); stream.write(launchError + '\n'); });
-  const result = await new Promise(accept => child.once('close', (exitCode, signal) => accept({ exitCode, signal, error: launchError })));
+  const closed = new Promise(accept => child.once('close', (exitCode, signal) => accept({ exitCode, signal, error: launchError })));
+  let finishService;
+  try { if (service && child.pid) finishService = await trackService(child, { ...service, log }); }
+  catch (error) { launchError = String(error); child.kill('SIGTERM'); }
+  const result = await closed;
+  if (finishService) await finishService();
   stream.end();
   await finished(stream).catch(error => { logError = String(error); });
   if (logError) { result.error = logError; result.exitCode = 1; }
@@ -181,7 +187,7 @@ export async function run(cwd, { label, argv, kind = 'check' }) {
     await save(recordFile, record);
     const env = { WORKTREE_MANAGED: '1', WORKTREE_PORT: String(state.lease.port), WORKTREE_EVIDENCE_DIR: evidence,
       GAME_EVIDENCE_DIR: evidence, GAME_PERF_URL: `http://127.0.0.1:${state.lease.port}/?seed=0` };
-    try { Object.assign(record, await execute(ctx.root, argv, record.log, env)); }
+    try { Object.assign(record, await execute(ctx.root, argv, record.log, env, { service: kind === 'service' ? { root: ctx.root, directory: ctx.directory, port: state.lease.port, session: state.token } : undefined })); }
     catch (error) { Object.assign(record, { exitCode: 1, error: String(error) }); }
     record.after = await snapshot(ctx.root);
     record.finishedAt = new Date().toISOString();

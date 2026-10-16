@@ -6,6 +6,6 @@
   - Local tasks and triage: `docs/agents/issue-tracker.md` and `docs/agents/triage-labels.md`.
   - Game behavior: `src/features/work-games/README.md`.
   - Validation: `VALIDATION.md` and `tests/manual/README.md`.
-  - Worktree setup and handoff: `scripts/README.md`.
+  - Worktree services, handoff, review snapshots and privacy scans: `scripts/README.md`.
 
 Only the root `README.md` and `AGENTS.md` are public documentation. Keep design, validation and task records local and ignored by Git.

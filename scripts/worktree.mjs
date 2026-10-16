@@ -1,3 +1,4 @@
+import { serviceStatus } from './preview-service.mjs';
 import { parseArgs } from 'node:util';
 import { join } from 'node:path';
 import { initialize, run, handoff, release, workspace } from './worktree-session.mjs';
@@ -7,6 +8,8 @@ const help = `Usage: npm run worktree -- <command>
   check --label <name> -- <command> [args]  Run a check and retain its evidence
   browser [-- <Playwright args>]           Run browser checks with isolated build/port
   preview                                 Build and serve in the foreground; Ctrl-C stops it
+  status                                  Inspect the recorded preview owner and log
+  stop                                    Ask the authenticated owner to stop its preview
   handoff                                 Write .scratch/worktree/handoff.{json,md}
   release                                 Release only this session's reservation; retain evidence
 Run from the checkout root. Create/archive managed worktrees with the existing app tools.`;
@@ -37,6 +40,9 @@ try {
     await handoff(root);
     console.log(`Handoff: ${join(directory, 'handoff.md')}`);
     process.exitCode = result.exitCode ?? (result.signal === 'SIGINT' ? 130 : 1);
+  } else if (command === 'status' || command === 'stop') {
+    const { root, directory } = await workspace();
+    console.log(JSON.stringify(await serviceStatus(root, directory, { stop: command === 'stop' }), null, 2));
   } else if (command === 'handoff') {
     const report = await handoff(process.cwd());
     console.log(JSON.stringify({ root: report.root, head: report.head, currentChecks: report.checks.filter(check => check.reusable).map(check => check.label), handoff: join(report.root, '.scratch/worktree/handoff.md') }, null, 2));
